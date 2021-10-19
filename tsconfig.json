@@ -1,13 +1,18 @@
 {
-    "compilerOptions": {
-      "module": "commonjs",
-      "target": "es5",
-      "noImplicitAny": true,
-      "outDir": "./dist",
-      "sourceMap": true
-    },
-    "include": [   
-      "src/*"
-    ],
-    
-  }
+  "ts-node": {
+    // This can be omitted when using ts-patch
+    "compiler": "ttypescript",  
+  },
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "esnext",
+    "plugins": [
+      {
+        "transform": "tst-expression-transformer"
+      }
+    ]
+  },
+  "include": [  
+    "src/*.ts"
+  ]
+}
