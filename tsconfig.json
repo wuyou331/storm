@@ -1,7 +1,7 @@
 {
   "ts-node": {
     // This can be omitted when using ts-patch
-    "compiler": "ttypescript",  
+    "compiler": "ttypescript",
   },
   "compilerOptions": {
     "module": "commonjs",
@@ -12,7 +12,8 @@
       }
     ]
   },
-  "include": [  
-    "src/*.ts"
+  "include": [
+    "src/*.ts",
+    "index.ts"
   ]
 }
