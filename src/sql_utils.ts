@@ -1,4 +1,4 @@
-import { assertArrowFunctionExpression, assertExpression, assertIdentifier, Expression, ExpressionKind, ExpressionNode, isBinaryExpression, isIdentifier, isNumericLiteral, isPropertyAccessExpression, isStringLiteral } from "tst-expression";
+import { assertArrowFunctionExpression, assertExpression, assertIdentifier, Expression, ExpressionKind, ExpressionNode, IdentifierExpressionNode, isBinaryExpression, isIdentifier, isNumericLiteral, isPropertyAccessExpression, isStringLiteral } from "tst-expression";
 import { getMeta } from "./meta";
 import { SqlExprContext, SqlTableJoin } from "./sql_expr";
 
@@ -66,14 +66,20 @@ export class SqlUtils {
             //属性访问有两种， 1、调用lambda参数   2、调用变量
             assertExpression(topExpr)
             assertArrowFunctionExpression(topExpr.expression)
-            var parameters = topExpr.expression.parameters.map(p => p.name.escapedText)
-            if (isIdentifier(expr.expression) && parameters.includes(expr.expression.escapedText)) {
+            if (isIdentifier(expr.expression) &&
+                topExpr.expression.parameters.some(p => p.name.escapedText == (expr.expression as IdentifierExpressionNode).escapedText)) {
                 //调用lambda参数
                 if (context.joins.length == 1)
                     return expr.name.escapedText
                 else {
-                    assertIdentifier(expr.expression)
-                    return `${expr.expression.escapedText}.${expr.name.escapedText}`
+                    let propName = expr.expression.escapedText
+                    let i = context.joins.findIndex(j => j.Alias == propName)
+                    if (i == -1)
+                        throw Error(`未找到别名为${propName}的表`)
+                    let ctor = context.joins[i].Ctor
+                    let meta = getMeta(ctor, expr.name.escapedText)
+                    propName = meta?.Alias ?? propName
+                    return `${expr.expression.escapedText}.${propName}`
                 }
             } else {
                 //调用变量,多级变量访问支持
