@@ -1,4 +1,4 @@
-import { assertArrowFunctionExpression, assertExpression, Expression, ExpressionNode } from "tst-expression";
+import { assertArrowFunctionExpression, assertExpression, Expression, ExpressionNode, ParameterExpressionNode } from "tst-expression";
 import { SqlExpr, SqlJoin2, SqlJoin3, SqlJoin4, SqlJoin5, SqlJoin6 } from "./sql_expr.type";
 import { SqlUtils } from './sql_utils';
 
@@ -24,6 +24,7 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 
 
 	//方法签名需注意ctor2参数在接口中是必选的，但在实际的方法中是可选的
+	//因为TS语法限制，获取泛型对象需把构造函数传参进来，所以Join方法需要用圆括号传泛型参数而 Where用尖括号传泛型参数
 	Join<T1>(ctor2: { new(): T1 }): SqlJoin2<T, T, T1>
 	Join<T1, T2>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }): SqlJoin2<T, T1, T2>
 	Join<T1, T2, T3>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }): SqlJoin3<T, T1, T2, T3>
@@ -45,7 +46,7 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 				if (ctor == this.context.joins[0].Ctor && this.context.joins[0].Alias == undefined)
 					this.context.joins[0].Alias = alias
 
-				//join方法可以同时多个表，需找出新表
+				//join方法可以同时多个表，需找出新表并缓存
 				if (!this.context.joins.some(j => j.Ctor == ctor && j.Alias == alias)) {
 					newCtor = ctor
 					newAlias = alias
@@ -70,6 +71,17 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 	Where<T1, T2, T3, T4, T5, T6>(predicate: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => boolean>): SqlExpr<T> {
 		assertExpression(predicate)
 		assertArrowFunctionExpression(predicate.expression)
+		let errParam: ParameterExpressionNode
+		predicate.expression.parameters.forEach(param => {
+			let exists = this.context.joins.some(j => j.Alias == param.name.escapedText)
+			if (!exists) {
+				errParam = param
+
+			}
+		})
+		if (errParam) {
+			throw Error(`Where表达式中，有不存在的别名:'${errParam.name.escapedText}'\r\nWhere(${predicate.compiled})`)
+		}
 		this.context.whereConditions.push(predicate)
 		return this
 	}

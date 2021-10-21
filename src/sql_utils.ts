@@ -1,4 +1,4 @@
-import { assertArrowFunctionExpression, assertExpression, assertIdentifier, Expression, ExpressionKind, ExpressionNode, IdentifierExpressionNode, isBinaryExpression, isIdentifier, isNumericLiteral, isPropertyAccessExpression, isStringLiteral } from "tst-expression";
+import { assertArrowFunctionExpression, assertExpression, assertIdentifier, assertParameterExpression, assertPropertyAccessExpression, Expression, ExpressionKind, ExpressionNode, IdentifierExpressionNode, isBinaryExpression, isIdentifier, isNumericLiteral, isPropertyAccessExpression, isStringLiteral } from "tst-expression";
 import { getMeta } from "./meta";
 import { SqlExprContext, SqlTableJoin } from "./sql_expr";
 
@@ -69,35 +69,10 @@ export class SqlUtils {
             if (isIdentifier(expr.expression) &&
                 topExpr.expression.parameters.some(p => p.name.escapedText == (expr.expression as IdentifierExpressionNode).escapedText)) {
                 //调用lambda参数
-                if (context.joins.length == 1)
-                    return expr.name.escapedText
-                else {
-                    let propName = expr.expression.escapedText
-                    let i = context.joins.findIndex(j => j.Alias == propName)
-                    if (i == -1)
-                        throw Error(`未找到别名为${propName}的表`)
-                    let ctor = context.joins[i].Ctor
-                    let meta = getMeta(ctor, expr.name.escapedText)
-                    propName = meta?.Alias ?? propName
-                    return `${expr.expression.escapedText}.${propName}`
-                }
+                return SqlUtils.convertPropertyAccessByArgs(context, topExpr, expr)
             } else {
-                //调用变量,多级变量访问支持
-                let tmpExp = expr.expression
-                let stack: string[] = []
-                stack.push(expr.name.escapedText)
-                while (isPropertyAccessExpression(tmpExp)) {
-                    stack.push(tmpExp.name.escapedText)
-                    tmpExp = tmpExp.expression
-                }
-                assertIdentifier(tmpExp)
-                stack.push(tmpExp.escapedText)
-                stack.reverse()
-
-                let val = topExpr.context
-                for (let i in stack)
-                    val = val[stack[i]]
-                return val
+                //调用变量
+                return SqlUtils.convertPropertyAccessByVar(context, topExpr, expr)
             }
         } else if (isIdentifier(expr)) {
             //lambda中直接访问变量
@@ -108,7 +83,46 @@ export class SqlUtils {
         else if (expr.kind == ExpressionKind.FalseKeyword) return "0"
     }
 
+    /** 转换lambda参数的属性访问 */
+    private static convertPropertyAccessByArgs(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode) {
 
+        assertPropertyAccessExpression(expr)
+        assertIdentifier(expr.expression)
+
+        if (context.joins.length == 1)
+            return expr.name.escapedText
+        else {
+            let propName = expr.expression.escapedText
+            let i = context.joins.findIndex(j => j.Alias == propName)
+            if (i == -1)
+                throw Error(`未找到别名为${propName}的表`)
+            let ctor = context.joins[i].Ctor
+            let meta = getMeta(ctor, expr.name.escapedText)
+            propName = meta?.Alias ?? propName
+            return `${expr.expression.escapedText}.${propName}`
+        }
+    }
+    /** 转换调用变量的属性访问,支持多级变量访问支持 */
+    private static convertPropertyAccessByVar(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode) {
+
+        assertPropertyAccessExpression(expr)
+        //
+        let tmpExp = expr.expression
+        let stack: string[] = []
+        stack.push(expr.name.escapedText)
+        while (isPropertyAccessExpression(tmpExp)) {
+            stack.push(tmpExp.name.escapedText)
+            tmpExp = tmpExp.expression
+        }
+        assertIdentifier(tmpExp)
+        stack.push(tmpExp.escapedText)
+        stack.reverse()
+
+        let val = topExpr.context
+        for (let i in stack)
+            val = val[stack[i]]
+        return val
+    }
     static convertTableName(join: SqlTableJoin) {
         let meta = getMeta(join.Ctor)
         let name = meta?.Alias ?? join.Ctor.name

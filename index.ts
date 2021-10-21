@@ -32,7 +32,7 @@ let sql = From(Blog)
     .Join(Comment).ON((b, c) => c.BlogId == b.Id)
     .Join(Comment, User).ON((c, cu) => c.UserId == cu.Id)
     .Where(b => b.Id == r.a)
-    .Where<User>(bu => bu.Id == item.b.v || bu.Id == item.a)
+    .Where<User,User>((bu,cu) => bu.Id == item.b.v || cu.Id == item.a)
     .ToSql()
 
 
