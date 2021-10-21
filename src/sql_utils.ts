@@ -1,7 +1,8 @@
-import { assertIdentifier, Expression, ExpressionKind, ExpressionNode, isBinaryExpression, isNumericLiteral, isPropertyAccessExpression, isStringLiteral } from "tst-expression";
-import {  SqlExprContext, SqlTableJoin } from "./sql_expr";
+import { assertArrowFunctionExpression, assertExpression, assertIdentifier, Expression, ExpressionKind, ExpressionNode, isBinaryExpression, isIdentifier, isNumericLiteral, isPropertyAccessExpression, isStringLiteral } from "tst-expression";
+import { SqlExprContext, SqlTableJoin } from "./sql_expr";
 
 export class SqlUtils {
+
 
     static convertWhere(context: SqlExprContext) {
         if (context.whereConditions.length == 0) return ""
@@ -16,7 +17,10 @@ export class SqlUtils {
 
 
     /** 转换条件表达式为SQL语句部分 */
-    static convertCondition(context: SqlExprContext, expr: Expression<any>) {
+    static convertCondition(context: SqlExprContext, topExpr: Expression<any>, expression?: ExpressionNode) {
+        assertExpression(topExpr)
+        assertArrowFunctionExpression(topExpr.expression)
+
         const operatorMap: { [kind: number]: string } = {
             [ExpressionKind.BarBarToken]: "or",
             [ExpressionKind.AmpersandAmpersandToken]: "and",
@@ -28,20 +32,23 @@ export class SqlUtils {
             [ExpressionKind.LessThanEqualsToken]: "<=",
             [ExpressionKind.GreaterThanToken]: ">",
             [ExpressionKind.LessThanToken]: "<",
-        };
-        if (isBinaryExpression(expr))
-            if (expr.operatorToken.kind == ExpressionKind.BarBarToken || expr.operatorToken.kind == ExpressionKind.AmpersandAmpersandToken)
-                return `(${SqlUtils.convertCondition(context, expr.left)} ${operatorMap[expr.operatorToken.kind]} ${this.convertCondition(context, expr.right)})`
+        }
+
+        if (expression == null) expression = topExpr.expression.body
+        if (isBinaryExpression(expression))
+            if (expression.operatorToken.kind == ExpressionKind.BarBarToken || expression.operatorToken.kind == ExpressionKind.AmpersandAmpersandToken)
+                return `(${SqlUtils.convertCondition(context, topExpr, expression.left)} ${operatorMap[expression.operatorToken.kind]} ${this.convertCondition(context, topExpr, expression.right)})`
             else
-                return `${SqlUtils.convertVal(context, expr.left)} ${operatorMap[expr.operatorToken.kind]} ${SqlUtils.convertVal(context, expr.right)}`
-        else if (expr.kind == ExpressionKind.TrueKeyword) return "1==1";
-        else if (expr.kind == ExpressionKind.FalseKeyword) return "1<>1";
+                return `${SqlUtils.convertVal(context, topExpr, expression.left)} ${operatorMap[expression.operatorToken.kind]} ${SqlUtils.convertVal(context, topExpr, expression.right)}`
+        else if (expression.kind == ExpressionKind.TrueKeyword) return "1==1";
+        else if (expression.kind == ExpressionKind.FalseKeyword) return "1<>1";
     }
 
     /** 转换条件表达式左右两边的值为SQL语句 */
-    static convertVal(context: SqlExprContext, expr: ExpressionNode) {
+    static convertVal(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode) {
+
         if (isBinaryExpression(expr))
-            SqlUtils.convertCondition(context, expr)
+            SqlUtils.convertCondition(context, topExpr, expr)
         else if (isPropertyAccessExpression(expr)) {
             if (context.joins.length == 1)
                 return expr.name.escapedText
@@ -49,6 +56,9 @@ export class SqlUtils {
                 assertIdentifier(expr.expression)
                 return `${expr.expression.escapedText}.${expr.name.escapedText}`
             }
+        } else if (isIdentifier(expr)) {
+            //访问变量
+            return topExpr.context[expr.escapedText]
         }
         else if (isNumericLiteral(expr) || isStringLiteral(expr)) return expr.text
         else if (expr.kind == ExpressionKind.TrueKeyword) return "1"

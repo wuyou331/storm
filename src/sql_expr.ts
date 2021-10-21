@@ -4,7 +4,7 @@ import { SqlUtils } from './sql_utils';
 
 
 export class SqlTableJoin {
-	constructor(public Ctor: { new(): any }, public Alias?: string, public ON?: ExpressionNode) { }
+	constructor(public Ctor: { new(): any }, public Alias?: string, public ON?: Expression<any>) { }
 }
 
 export class SqlExprContext {
@@ -54,7 +54,7 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 			if (newCtor == undefined)
 				throw Error(`Join表达式有误，类型或别名与之前的Join冲突\r\nJoin(${ctors.map(c => c.name).join(',')}).ON(${on.compiled})`)
 
-			this.context.joins.push(new SqlTableJoin(newCtor, newAlias, expr.body))
+			this.context.joins.push(new SqlTableJoin(newCtor, newAlias, on))
 			return this;
 		}
 		return { ON: On };
