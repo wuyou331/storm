@@ -1,8 +1,23 @@
 import { assertArrowFunctionExpression, assertExpression, assertIdentifier, Expression, ExpressionKind, ExpressionNode, isBinaryExpression, isIdentifier, isNumericLiteral, isPropertyAccessExpression, isStringLiteral } from "tst-expression";
+import { getMeta } from "./meta";
 import { SqlExprContext, SqlTableJoin } from "./sql_expr";
 
 export class SqlUtils {
 
+
+    static convertJoin(context: SqlExprContext) {
+        if (context.joins.length == 0) return ""
+        let whereStr = ""
+        context.joins.forEach((join, i) => {
+            if (i > 0) {
+                whereStr += `join ${SqlUtils.convertTableName(join)} on ${SqlUtils.convertCondition(context, join.ON)}`
+                if (i < context.joins.length - 1)
+                    whereStr += "\r\n"
+            }
+
+        });
+        return whereStr
+    }
 
     static convertWhere(context: SqlExprContext) {
         if (context.whereConditions.length == 0) return ""
@@ -15,49 +30,71 @@ export class SqlUtils {
         return whereStr
     }
 
-
-    /** 转换条件表达式为SQL语句部分 */
-    static convertCondition(context: SqlExprContext, topExpr: Expression<any>, expression?: ExpressionNode) {
-        assertExpression(topExpr)
-        assertArrowFunctionExpression(topExpr.expression)
-
-        const operatorMap: { [kind: number]: string } = {
-            [ExpressionKind.BarBarToken]: "or",
-            [ExpressionKind.AmpersandAmpersandToken]: "and",
-            [ExpressionKind.EqualsEqualsEqualsToken]: "=",
-            [ExpressionKind.EqualsEqualsToken]: "=",
-            [ExpressionKind.ExclamationEqualsEqualsToken]: "!=",
-            [ExpressionKind.ExclamationEqualsToken]: "!=",
-            [ExpressionKind.GreaterThanEqualsToken]: ">=",
-            [ExpressionKind.LessThanEqualsToken]: "<=",
-            [ExpressionKind.GreaterThanToken]: ">",
-            [ExpressionKind.LessThanToken]: "<",
-        }
-
-        if (expression == null) expression = topExpr.expression.body
-        if (isBinaryExpression(expression))
-            if (expression.operatorToken.kind == ExpressionKind.BarBarToken || expression.operatorToken.kind == ExpressionKind.AmpersandAmpersandToken)
-                return `(${SqlUtils.convertCondition(context, topExpr, expression.left)} ${operatorMap[expression.operatorToken.kind]} ${this.convertCondition(context, topExpr, expression.right)})`
-            else
-                return `${SqlUtils.convertVal(context, topExpr, expression.left)} ${operatorMap[expression.operatorToken.kind]} ${SqlUtils.convertVal(context, topExpr, expression.right)}`
-        else if (expression.kind == ExpressionKind.TrueKeyword) return "1==1";
-        else if (expression.kind == ExpressionKind.FalseKeyword) return "1<>1";
+    private static operatorMap: { [kind: number]: string } = {
+        [ExpressionKind.BarBarToken]: "or",
+        [ExpressionKind.AmpersandAmpersandToken]: "and",
+        [ExpressionKind.EqualsEqualsEqualsToken]: "=",
+        [ExpressionKind.EqualsEqualsToken]: "=",
+        [ExpressionKind.ExclamationEqualsEqualsToken]: "!=",
+        [ExpressionKind.ExclamationEqualsToken]: "!=",
+        [ExpressionKind.GreaterThanEqualsToken]: ">=",
+        [ExpressionKind.LessThanEqualsToken]: "<=",
+        [ExpressionKind.GreaterThanToken]: ">",
+        [ExpressionKind.LessThanToken]: "<",
     }
 
-    /** 转换条件表达式左右两边的值为SQL语句 */
+    /** 转换条件表达式 Where 或者 Join */
+    static convertCondition(context: SqlExprContext, topExpr: Expression<any>, partExpr?: ExpressionNode) {
+        assertExpression(topExpr)
+        assertArrowFunctionExpression(topExpr.expression)
+        if (partExpr == null) partExpr = topExpr.expression.body
+        if (isBinaryExpression(partExpr))
+            if (partExpr.operatorToken.kind == ExpressionKind.BarBarToken || partExpr.operatorToken.kind == ExpressionKind.AmpersandAmpersandToken)
+                return `(${SqlUtils.convertCondition(context, topExpr, partExpr.left)} ${SqlUtils.operatorMap[partExpr.operatorToken.kind]} ${this.convertCondition(context, topExpr, partExpr.right)})`
+            else
+                return `${SqlUtils.convertVal(context, topExpr, partExpr.left)} ${SqlUtils.operatorMap[partExpr.operatorToken.kind]} ${SqlUtils.convertVal(context, topExpr, partExpr.right)}`
+        else if (partExpr.kind == ExpressionKind.TrueKeyword) return "1==1";
+        else if (partExpr.kind == ExpressionKind.FalseKeyword) return "1<>1";
+    }
+
+    /** 转换条件表达式左右两边的值 */
     static convertVal(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode) {
 
         if (isBinaryExpression(expr))
             SqlUtils.convertCondition(context, topExpr, expr)
         else if (isPropertyAccessExpression(expr)) {
-            if (context.joins.length == 1)
-                return expr.name.escapedText
-            else {
-                assertIdentifier(expr.expression)
-                return `${expr.expression.escapedText}.${expr.name.escapedText}`
+            //属性访问有两种 
+            assertExpression(topExpr)
+            assertArrowFunctionExpression(topExpr.expression)
+            var parameters = topExpr.expression.parameters.map(p => p.name.escapedText)
+            if (isIdentifier(expr.expression) && parameters.includes(expr.expression.escapedText)) {
+                //调用lambda参数
+                if (context.joins.length == 1)
+                    return expr.name.escapedText
+                else {
+                    assertIdentifier(expr.expression)
+                    return `${expr.expression.escapedText}.${expr.name.escapedText}`
+                }
+            } else {
+                //调用变量,多级变量访问支持
+                let tmpExp = expr.expression
+                let stack: string[] = []
+                stack.push(expr.name.escapedText)
+                while (isPropertyAccessExpression(tmpExp)) {
+                    stack.push(tmpExp.name.escapedText)
+                    tmpExp = tmpExp.expression
+                }
+                assertIdentifier(tmpExp)
+                stack.push(tmpExp.escapedText)
+                let val = topExpr.context
+                stack.reverse()
+                for (let i in stack) {
+                    val = val[stack[i]]
+                }
+                return val
             }
         } else if (isIdentifier(expr)) {
-            //访问变量
+            //lambda中直接访问变量
             return topExpr.context[expr.escapedText]
         }
         else if (isNumericLiteral(expr) || isStringLiteral(expr)) return expr.text
@@ -65,26 +102,17 @@ export class SqlUtils {
         else if (expr.kind == ExpressionKind.FalseKeyword) return "0"
     }
 
+
     static convertTableName(join: SqlTableJoin) {
+        let meta = getMeta(join.Ctor)
+        let name = meta?.Alias ?? join.Ctor.name
         if (join.Alias) {
-            return `${join.Ctor.name} as ${join.Alias}`;
+            return `${name} as ${join.Alias}`;
         } else {
-            return `${join.Ctor.name}`;
+            return `${name}`;
         }
     }
 
 
-    static convertJoin(context: SqlExprContext) {
-        if (context.joins.length == 0) return ""
-        let whereStr = ""
-        context.joins.forEach((join, i) => {
-            if (i > 0) {
-                whereStr += `join ${SqlUtils.convertTableName(join)} on ${SqlUtils.convertCondition(context, join.ON)}`
-                if (i < context.joins.length)
-                    whereStr += "\r\n"
-            }
 
-        });
-        return whereStr
-    }
 }

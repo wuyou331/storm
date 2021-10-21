@@ -1,5 +1,5 @@
 import { assertArrowFunctionExpression, assertExpression, Expression, ExpressionNode } from "tst-expression";
-import { SqlExpr, SqlJoin2, SqlJoin3, SqlJoin4, SqlJoin5 } from "./sql_expr.type";
+import { SqlExpr, SqlJoin2, SqlJoin3, SqlJoin4, SqlJoin5, SqlJoin6 } from "./sql_expr.type";
 import { SqlUtils } from './sql_utils';
 
 
@@ -28,15 +28,16 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 	Join<T1, T2>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }): SqlJoin2<T, T1, T2>
 	Join<T1, T2, T3>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }): SqlJoin3<T, T1, T2, T3>
 	Join<T1, T2, T3, T4>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }): SqlJoin4<T, T1, T2, T3, T4>
-	Join<T1, T2, T3, T4, T5>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T4 }): SqlJoin5<T, T1, T2, T3, T4, T5> {
-		const On = (on: Expression<(tab1: T1, tab2: T2, tab3?: T3, tab4?: T4, tab5?: T5) => boolean>): SqlExpr<T> => {
+	Join<T1, T2, T3, T4, T5>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }): SqlJoin5<T, T1, T2, T3, T4, T5>
+	Join<T1, T2, T3, T4, T5, T6>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }, ctor6?: { new(): T6 }): SqlJoin6<T, T1, T2, T3, T4, T5, T6> {
+		const fnON = (on: Expression<(tab1: T1, tab2: T2, tab3?: T3, tab4?: T4, tab5?: T5, tab6?: T6) => boolean>): SqlExpr<T> => {
 			assertExpression(on)
 			assertArrowFunctionExpression(on.expression)
 			let expr = on.expression
-			var ctors: { new(): any }[] = [ctor1, ctor2, ctor3, ctor4, ctor5].filter(it => it != undefined)
+
+			var ctors: { new(): any }[] = [ctor1, ctor2, ctor3, ctor4, ctor5, ctor6].filter(it => it != undefined)
 			//join方法只有一个参数时，默认与主表连接
-			if (ctors.length == 1)
-				ctors = [this.context.joins[0].Ctor, ...ctors]
+			if (ctors.length == 1) ctors = [this.context.joins[0].Ctor, ...ctors]
 			let newCtor: { new(): any }
 			let newAlias: string
 			ctors.forEach((ctor, i) => {
@@ -57,7 +58,7 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 			this.context.joins.push(new SqlTableJoin(newCtor, newAlias, on))
 			return this;
 		}
-		return { ON: On };
+		return { ON: fnON };
 	}
 
 	Where(predicate: Expression<(m: T) => boolean>): SqlExpr<T>
@@ -65,7 +66,8 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 	Where<T1, T2>(predicate: Expression<(t1: T1, t2: T2) => boolean>): SqlExpr<T>
 	Where<T1, T2, T3>(predicate: Expression<(t1: T1, t2: T2, t3: T3) => boolean>): SqlExpr<T>
 	Where<T1, T2, T3, T4>(predicate: Expression<(t1: T1, t2: T2, t3: T3, t4: T4) => boolean>): SqlExpr<T>
-	Where<T1, T2, T3, T4, T5>(predicate: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => boolean>): SqlExpr<T> {
+	Where<T1, T2, T3, T4, T5>(predicate: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => boolean>): SqlExpr<T>
+	Where<T1, T2, T3, T4, T5, T6>(predicate: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => boolean>): SqlExpr<T> {
 		assertExpression(predicate)
 		assertArrowFunctionExpression(predicate.expression)
 		this.context.whereConditions.push(predicate)
@@ -75,11 +77,10 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 
 
 	ToSql() {
-		return ["select * from ",
-			SqlUtils.convertTableName(this.context.joins[0]),
-			SqlUtils.convertJoin(this.context),
-			SqlUtils.convertWhere(this.context)
-		].join("")
+		return [`select * from ${SqlUtils.convertTableName(this.context.joins[0])}`,
+		SqlUtils.convertJoin(this.context),
+		SqlUtils.convertWhere(this.context)
+		].join("\r\n")
 	}
 }
 

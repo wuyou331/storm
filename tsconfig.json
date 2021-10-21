@@ -6,6 +6,7 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "esnext",
+    "experimentalDecorators": true,
     "plugins": [
       {
         "transform": "tst-expression-transformer"
