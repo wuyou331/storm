@@ -11,7 +11,7 @@ export function Alias(name: string) {
     }
 }
 
-
+/** Get Meta of Object */
 export function getMeta(o: any): Meta {
     let meta: Meta = o.prototype.$Meta
     if (!meta) {

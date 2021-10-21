@@ -26,6 +26,7 @@ class Comment {
 let item = { a: 1321, b: { v: 321 } }
 
 let r = Math.random()
+
 let sql = From(Blog)
     .Join(User).ON((b, bu) => b.UserId == bu.Id)
     .Join(Comment).ON((b, c) => c.BlogId == b.Id)

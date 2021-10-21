@@ -63,7 +63,7 @@ export class SqlUtils {
         if (isBinaryExpression(expr))
             SqlUtils.convertCondition(context, topExpr, expr)
         else if (isPropertyAccessExpression(expr)) {
-            //属性访问有两种 
+            //属性访问有两种， 1、调用lambda参数   2、调用变量
             assertExpression(topExpr)
             assertArrowFunctionExpression(topExpr.expression)
             var parameters = topExpr.expression.parameters.map(p => p.name.escapedText)
@@ -86,11 +86,11 @@ export class SqlUtils {
                 }
                 assertIdentifier(tmpExp)
                 stack.push(tmpExp.escapedText)
-                let val = topExpr.context
                 stack.reverse()
-                for (let i in stack) {
+
+                let val = topExpr.context
+                for (let i in stack)
                     val = val[stack[i]]
-                }
                 return val
             }
         } else if (isIdentifier(expr)) {
