@@ -1,35 +1,31 @@
-
+import "reflect-metadata"
 
 interface Meta {
     /** 表或列的别名 */
     Alias?: string
 }
-/** Table or column alias decorators*/
+/** Table or column alias decorators */
 export function alias(name: string) {
-    return function (target, methodName?: string, descriptor?: PropertyDescriptor) {
-        let meta = getMeta(target, methodName);
+    return (target, propertyKey?: string, descriptor?: PropertyDescriptor) => {
+        const meta = getMeta(target, propertyKey)
         meta.Alias = name
+        if (propertyKey) {
+            Reflect.defineMetadata('propertyMetaData', meta, target?.prototype ?? target, propertyKey);
+        } else {
+            Reflect.defineMetadata('classMetaData', meta, target);
+        }
+
     }
 }
 
 /** Get Meta of Object */
-export function getMeta(target: any, methodName?: string): Meta {
-    let meta: Meta
-    if (!methodName)
-        meta = target.prototype.$ClassMeta
-    else {
-        target = target?.prototype ?? target
-        if (!target.$PropertyMeta) target.$PropertyMeta = {}
-        meta = target.$PropertyMeta[methodName]
+export function getMeta(target: any, propertyKey?: string): Meta {
+
+    if (propertyKey) {
+        return Reflect.getMetadata('propertyMetaData', target?.prototype ?? target, propertyKey) ?? {}
+    } else {
+        return Reflect.getMetadata('classMetaData', target) ?? {}
     }
-    if (!meta) {
-        meta = {}
-        if (!methodName)
-            target.prototype.$ClassMeta = meta
-        else {
-            target.$PropertyMeta[methodName] = meta
-        }
-    }
-    return meta
+
 }
 

@@ -6,9 +6,9 @@ import { From } from "./src/sql_expr"
 @alias("用户表")
 class User {
     @alias("userId")
-    Id: number
-    Name: string
-    Gender: boolean
+   public Id: number
+   public  Name: string
+   public  Gender: boolean
 }
 
 class Blog {
@@ -23,18 +23,23 @@ class Comment {
     BlogId: number
     Content: string
 }
-let item = { a: 1321, b: { v: 321 } }
+const item = { a: 1321, b: { v: 321 } }
 
-let r = { a: Math.random() }
+const r = { a: Math.random() }
 
-let sql = From(Blog)
-    .Join(User).ON((b, bu) => b.UserId == bu.Id)
-    .Join(Comment).ON((b, c) => c.BlogId == b.Id)
-    .LeftJoin(Comment, User).ON((c, cu) => c.UserId == cu.Id)
-    .Where(b => b.Id == r.a)
-    .Where<User, User>((bu, cu) => bu.Id == item.b.v || cu.Id == item.a)
-    .ToSql()
+const sql = From(Blog)
+    .Join(User).ON((b, bu) => b.UserId === bu.Id)
+    .Join(Comment).ON((b, c) => c.BlogId === b.Id)
+    .LeftJoin(Comment, User).ON((c, cu) => c.UserId === cu.Id)
+    .Where(b => b.Id === r.a)
+    .Where<User, User>((bu, cu) => bu.Id === item.b.v || cu.Id === item.a)
+    .Select(bu => (bu))
 
 
-console.info(sql)
+
+console.info(sql.ToSql())
+
+console.info(typeof sql)
+console.info(typeof 1)
+console.info(typeof {})
 
