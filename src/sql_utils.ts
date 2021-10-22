@@ -10,7 +10,7 @@ export class SqlUtils {
         let whereStr = ""
         context.joins.forEach((join, i) => {
             if (i > 0) {
-                whereStr += `join ${SqlUtils.convertTableName(join)} on ${SqlUtils.convertCondition(context, join.ON)}`
+                whereStr += `${join.JoinType.toLowerCase()} join ${SqlUtils.convertTableName(join)} on ${SqlUtils.convertCondition(context, join.ON)}`.trim()
                 if (i < context.joins.length - 1)
                     whereStr += "\r\n"
             }

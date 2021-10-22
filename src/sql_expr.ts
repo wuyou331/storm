@@ -2,9 +2,10 @@ import { assertArrowFunctionExpression, assertExpression, Expression, Expression
 import { SqlExpr, SqlJoin2, SqlJoin3, SqlJoin4, SqlJoin5, SqlJoin6 } from "./sql_expr.type";
 import { SqlUtils } from './sql_utils';
 
-
+type JoinType = "Left" | "Right" | "Full" | "Inner" | ""
 export class SqlTableJoin {
-	constructor(public Ctor: { new(): any }, public Alias?: string, public ON?: Expression<any>) { }
+
+	constructor(public Ctor: { new(): any }, public Alias?: string, public ON?: Expression<any>, public JoinType?: JoinType) { }
 }
 
 export class SqlExprContext {
@@ -31,6 +32,48 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 	Join<T1, T2, T3, T4>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }): SqlJoin4<T, T1, T2, T3, T4>
 	Join<T1, T2, T3, T4, T5>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }): SqlJoin5<T, T1, T2, T3, T4, T5>
 	Join<T1, T2, T3, T4, T5, T6>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }, ctor6?: { new(): T6 }): SqlJoin6<T, T1, T2, T3, T4, T5, T6> {
+		return this.join("", ctor1, ctor2, ctor3, ctor4, ctor5, ctor6)
+	}
+
+	InnerJoin<T1>(ctor2: { new(): T1 }): SqlJoin2<T, T, T1>
+	InnerJoin<T1, T2>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }): SqlJoin2<T, T1, T2>
+	InnerJoin<T1, T2, T3>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }): SqlJoin3<T, T1, T2, T3>
+	InnerJoin<T1, T2, T3, T4>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }): SqlJoin4<T, T1, T2, T3, T4>
+	InnerJoin<T1, T2, T3, T4, T5>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }): SqlJoin5<T, T1, T2, T3, T4, T5>
+	InnerJoin<T1, T2, T3, T4, T5, T6>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }, ctor6?: { new(): T6 }): SqlJoin6<T, T1, T2, T3, T4, T5, T6> {
+		return this.join("Inner", ctor1, ctor2, ctor3, ctor4, ctor5, ctor6)
+	}
+
+	LeftJoin<T1>(ctor2: { new(): T1 }): SqlJoin2<T, T, T1>
+	LeftJoin<T1, T2>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }): SqlJoin2<T, T1, T2>
+	LeftJoin<T1, T2, T3>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }): SqlJoin3<T, T1, T2, T3>
+	LeftJoin<T1, T2, T3, T4>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }): SqlJoin4<T, T1, T2, T3, T4>
+	LeftJoin<T1, T2, T3, T4, T5>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }): SqlJoin5<T, T1, T2, T3, T4, T5>
+	LeftJoin<T1, T2, T3, T4, T5, T6>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }, ctor6?: { new(): T6 }): SqlJoin6<T, T1, T2, T3, T4, T5, T6> {
+		return this.join("Left", ctor1, ctor2, ctor3, ctor4, ctor5, ctor6)
+	}
+
+	RightJoin<T1>(ctor2: { new(): T1 }): SqlJoin2<T, T, T1>
+	RightJoin<T1, T2>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }): SqlJoin2<T, T1, T2>
+	RightJoin<T1, T2, T3>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }): SqlJoin3<T, T1, T2, T3>
+	RightJoin<T1, T2, T3, T4>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }): SqlJoin4<T, T1, T2, T3, T4>
+	RightJoin<T1, T2, T3, T4, T5>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }): SqlJoin5<T, T1, T2, T3, T4, T5>
+	RightJoin<T1, T2, T3, T4, T5, T6>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }, ctor6?: { new(): T6 }): SqlJoin6<T, T1, T2, T3, T4, T5, T6> {
+		return this.join("Right", ctor1, ctor2, ctor3, ctor4, ctor5, ctor6)
+	}
+
+
+	FullJoin<T1>(ctor2: { new(): T1 }): SqlJoin2<T, T, T1>
+	FullJoin<T1, T2>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }): SqlJoin2<T, T1, T2>
+	FullJoin<T1, T2, T3>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }): SqlJoin3<T, T1, T2, T3>
+	FullJoin<T1, T2, T3, T4>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }): SqlJoin4<T, T1, T2, T3, T4>
+	FullJoin<T1, T2, T3, T4, T5>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }): SqlJoin5<T, T1, T2, T3, T4, T5>
+	FullJoin<T1, T2, T3, T4, T5, T6>(ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }, ctor6?: { new(): T6 }): SqlJoin6<T, T1, T2, T3, T4, T5, T6> {
+		return this.join("Full", ctor1, ctor2, ctor3, ctor4, ctor5, ctor6)
+	}
+
+
+	private join<T1, T2, T3, T4, T5, T6>(joinType: JoinType, ctor1: { new(): T1 }, ctor2?: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }, ctor6?: { new(): T6 }): SqlJoin6<T, T1, T2, T3, T4, T5, T6> {
 		const fnON = (on: Expression<(tab1: T1, tab2: T2, tab3?: T3, tab4?: T4, tab5?: T5, tab6?: T6) => boolean>): SqlExpr<T> => {
 			assertExpression(on)
 			assertArrowFunctionExpression(on.expression)
@@ -56,7 +99,7 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 			if (newCtor == undefined)
 				throw Error(`Join表达式有误，类型或别名与之前的Join冲突\r\nJoin(${ctors.map(c => c.name).join(',')}).ON(${on.compiled})`)
 
-			this.context.joins.push(new SqlTableJoin(newCtor, newAlias, on))
+			this.context.joins.push(new SqlTableJoin(newCtor, newAlias, on, joinType))
 			return this;
 		}
 		return { ON: fnON };
@@ -72,13 +115,15 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 		assertExpression(predicate)
 		assertArrowFunctionExpression(predicate.expression)
 		let errParam: ParameterExpressionNode
-		predicate.expression.parameters.forEach(param => {
+		for (const i in predicate.expression.parameters) {
+			let param = predicate.expression.parameters[i]
 			let exists = this.context.joins.some(j => j.Alias == param.name.escapedText)
 			if (!exists) {
 				errParam = param
-
+				break
 			}
-		})
+		}
+
 		if (errParam) {
 			throw Error(`Where表达式中，有不存在的别名:'${errParam.name.escapedText}'\r\nWhere(${predicate.compiled})`)
 		}

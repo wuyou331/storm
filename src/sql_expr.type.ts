@@ -8,6 +8,36 @@ export interface SqlExpr<T> {
     Join<T1, T2, T3, T4, T5>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }): SqlJoin5<T, T1, T2, T3, T4, T5>
     Join<T1, T2, T3, T4, T5, T6>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }, ctor6?: { new(): T6 }): SqlJoin5<T, T1, T2, T3, T4, T5>
 
+	InnerJoin<T1>(ctor2: { new(): T1 }): SqlJoin2<T, T, T1>
+	InnerJoin<T1, T2>(ctor1: { new(): T1 }, ctor2: { new(): T2 }): SqlJoin2<T, T1, T2>
+	InnerJoin<T1, T2, T3>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }): SqlJoin3<T, T1, T2, T3>
+	InnerJoin<T1, T2, T3, T4>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }): SqlJoin4<T, T1, T2, T3, T4>
+	InnerJoin<T1, T2, T3, T4, T5>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }): SqlJoin5<T, T1, T2, T3, T4, T5>
+	InnerJoin<T1, T2, T3, T4, T5, T6>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }, ctor6?: { new(): T6 }): SqlJoin6<T, T1, T2, T3, T4, T5, T6> 
+
+	LeftJoin<T1>(ctor2: { new(): T1 }): SqlJoin2<T, T, T1>
+	LeftJoin<T1, T2>(ctor1: { new(): T1 }, ctor2: { new(): T2 }): SqlJoin2<T, T1, T2>
+	LeftJoin<T1, T2, T3>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }): SqlJoin3<T, T1, T2, T3>
+	LeftJoin<T1, T2, T3, T4>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }): SqlJoin4<T, T1, T2, T3, T4>
+	LeftJoin<T1, T2, T3, T4, T5>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }): SqlJoin5<T, T1, T2, T3, T4, T5>
+	LeftJoin<T1, T2, T3, T4, T5, T6>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }, ctor6?: { new(): T6 }): SqlJoin6<T, T1, T2, T3, T4, T5, T6> 
+    
+	RightJoin<T1>(ctor2: { new(): T1 }): SqlJoin2<T, T, T1>
+	RightJoin<T1, T2>(ctor1: { new(): T1 }, ctor2: { new(): T2 }): SqlJoin2<T, T1, T2>
+	RightJoin<T1, T2, T3>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }): SqlJoin3<T, T1, T2, T3>
+	RightJoin<T1, T2, T3, T4>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }): SqlJoin4<T, T1, T2, T3, T4>
+	RightJoin<T1, T2, T3, T4, T5>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }): SqlJoin5<T, T1, T2, T3, T4, T5>
+	RightJoin<T1, T2, T3, T4, T5, T6>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }, ctor6?: { new(): T6 }): SqlJoin6<T, T1, T2, T3, T4, T5, T6> 
+
+
+	FullJoin<T1>(ctor2: { new(): T1 }): SqlJoin2<T, T, T1>
+	FullJoin<T1, T2>(ctor1: { new(): T1 }, ctor2: { new(): T2 }): SqlJoin2<T, T1, T2>
+	FullJoin<T1, T2, T3>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }): SqlJoin3<T, T1, T2, T3>
+	FullJoin<T1, T2, T3, T4>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }): SqlJoin4<T, T1, T2, T3, T4>
+	FullJoin<T1, T2, T3, T4, T5>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }): SqlJoin5<T, T1, T2, T3, T4, T5>
+	FullJoin<T1, T2, T3, T4, T5, T6>(ctor1: { new(): T1 }, ctor2: { new(): T2 }, ctor3?: { new(): T3 }, ctor4?: { new(): T4 }, ctor5?: { new(): T5 }, ctor6?: { new(): T6 }): SqlJoin6<T, T1, T2, T3, T4, T5, T6> 
+
+
     Where(predicate: Expression<(m: T) => boolean>): SqlExpr<T>
     Where<T1>(predicate: Expression<(m: T1) => boolean>): SqlExpr<T>
     Where<T1, T2>(predicate: Expression<(t1: T1, t2: T2) => boolean>): SqlExpr<T>
