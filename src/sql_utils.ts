@@ -1,4 +1,4 @@
-import { assertArrowFunctionExpression, assertExpression, assertIdentifier, assertParameterExpression, assertPropertyAccessExpression, Expression, ExpressionKind, ExpressionNode, IdentifierExpressionNode, isBinaryExpression, isIdentifier, isNumericLiteral, isObjectLiteralExpression, isParenthesizedExpression, isPropertyAccessExpression, isStringLiteral } from "tst-expression";
+import { assertArrowFunctionExpression, assertExpression, assertIdentifier, assertParameterExpression, assertPropertyAccessExpression, Expression, ExpressionKind, ExpressionNode, IdentifierExpressionNode, isBinaryExpression, isIdentifier, isNumericLiteral, isObjectLiteralExpression, isParenthesizedExpression, isPropertyAccessExpression, isPropertyAssignmentExpression, isShorthandPropertyAssignmentExpression, isStringLiteral } from "tst-expression";
 import { getMeta } from "./meta";
 import { SqlExprContext, SqlTableJoin } from "./sql_expr";
 
@@ -119,8 +119,8 @@ export class SqlUtils {
         stack.reverse()
 
         let val = topExpr.context
-        for (const i in stack)
-            val = val[stack[i]]
+        for (const stackVal of stack)
+            val = val[stackVal]
         return val
     }
     static convertTableName(join: SqlTableJoin) {
@@ -149,24 +149,43 @@ export class SqlUtils {
             }
 
             if (isObjectLiteralExpression(expr)) {
+                // eg: Select(i=>{Id:id.Id})
+                let selectStr = []
+                for (const prop of expr.properties) {
+                    if (isShorthandPropertyAssignmentExpression(prop)) {
+                        assertIdentifier(prop.name)
+                        selectStr.push(SqlUtils.convertSelectFieldByisIdentifier(context, prop.name))
+                    } else if (isPropertyAssignmentExpression(prop)) {
+                        assertIdentifier(prop.name)
+                        assertPropertyAccessExpression(prop.initializer)
+                        selectStr.push(`${SqlUtils.convertVal(context,select,prop.initializer)} as ${prop.name.escapedText}`)
+                    }
+                }
+                return selectStr
 
             } else if (isIdentifier(expr)) {
-                const argName = expr.escapedText
-                if (select.expression.parameters.some(p => p.name.escapedText === argName)) {
-                    const index = context.joins.findIndex(j => j.Alias === argName)
-                    if (index === -1) throw Error(`Select方法有不能识别的别名'${argName}'`)
-                    const ctor = context.joins[index].Ctor
-                    const members = Object.getOwnPropertyNames(new ctor())
-                    if (context.joins.length === 1)
-                        return members.join(',')
-                    else
-                        return members.map(m => `${argName}.${m}`).join(",")
-                }
+                // eg: Select(i=>{i})
+                return SqlUtils.convertSelectFieldByisIdentifier(context, expr)
             } else {
                 throw Error("Select方法中有不能识别的语法")
             }
         }
 
+    }
+
+    private static convertSelectFieldByisIdentifier(context: SqlExprContext, expr: IdentifierExpressionNode) {
+        const select = context.select
+        const argName = expr.escapedText
+        if (select.expression.parameters.some(p => p.name.escapedText === argName)) {
+            const index = context.joins.findIndex(j => j.Alias === argName)
+            if (index === -1) throw Error(`Select方法有不能识别的别名'${argName}'`)
+            const ctor = context.joins[index].Ctor
+            const members = Object.getOwnPropertyNames(new ctor())
+            if (context.joins.length === 1)
+                return members.join(',')
+            else
+                return members.map(m => `${argName}.${m}`).join(",")
+        }
     }
 
 }

@@ -6,9 +6,9 @@ import { From } from "./src/sql_expr"
 @alias("用户表")
 class User {
     @alias("userId")
-   public Id: number
-   public  Name: string
-   public  Gender: boolean
+    public Id: number
+    public Name: string
+    public Gender: boolean
 }
 
 class Blog {
@@ -33,13 +33,8 @@ const sql = From(Blog)
     .LeftJoin(Comment, User).ON((c, cu) => c.UserId === cu.Id)
     .Where(b => b.Id === r.a)
     .Where<User, User>((bu, cu) => bu.Id === item.b.v || cu.Id === item.a)
-    .Select(bu => (bu))
+    .Select(bu => ({ bu, id: bu.Id }))
 
 
 
 console.info(sql.ToSql())
-
-console.info(typeof sql)
-console.info(typeof 1)
-console.info(typeof {})
-

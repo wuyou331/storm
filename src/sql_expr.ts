@@ -1,4 +1,4 @@
-import { assertArrowFunctionExpression, assertExpression, assertObjectLiteralExpression, Expression, ExpressionNode, isIdentifier, isObjectLiteralExpression, isParenthesizedExpression, ParameterExpressionNode } from "tst-expression";
+import { assertArrowFunctionExpression, assertExpression, assertObjectLiteralExpression, Expression, ExpressionNode, isIdentifier, isObjectLiteralExpression, isParenthesizedExpression, isStringLiteral, ParameterExpressionNode } from "tst-expression";
 import { SqlExpr, SqlJoin2, SqlJoin3, SqlJoin4, SqlJoin5, SqlJoin6 } from "./sql_expr.type";
 import { SqlUtils } from './sql_utils';
 
@@ -12,7 +12,7 @@ export class SqlExprContext {
 	public whereConditions: Expression<any>[] = []
 	/** join集合包含表和别名,第一个元素是from后面的主表 */
 	public joins: SqlTableJoin[] = []
-/** select 条件 */
+	/** select 条件 */
 	public select: undefined | string | Expression<any>
 }
 
@@ -83,22 +83,34 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 			let ctors: (new () => any)[] = [ctor1, ctor2, ctor3, ctor4, ctor5, ctor6].filter(it => it !== undefined)
 			// join方法只有一个参数时，默认与主表连接
 			if (ctors.length === 1) ctors = [this.context.joins[0].Ctor, ...ctors]
+
 			let newCtor: new () => any
 			let newAlias: string
-			ctors.forEach((ctor, i) => {
-				const alias = expr.parameters[i].name.escapedText
-				if (ctor === this.context.joins[0].Ctor && this.context.joins[0].Alias === undefined)
-					this.context.joins[0].Alias = alias
+			let newCtorNum = 0
+			for (const i in ctors) {
+				if (Object.prototype.hasOwnProperty.call(ctors, i)) {
+					const ctor = ctors[i];
+					const alias = expr.parameters[i].name.escapedText
+					// 主表没有别名时，第一次关联时为主表增加别名
+					if (ctor === this.context.joins[0].Ctor && this.context.joins[0].Alias === undefined)
+						this.context.joins[0].Alias = alias
 
-				// join方法可以同时多个表，需找出新表并缓存
-				if (!this.context.joins.some(j => j.Ctor === ctor && j.Alias === alias)) {
-					newCtor = ctor
-					newAlias = alias
+					// join方法可以同时多个表,但只能有一个表是本次关联新增的，如果有多个应该报错
+					// 需找出新表并缓存
+					if (!this.context.joins.some(j => j.Ctor === ctor && j.Alias === alias)) {
+						newCtor = ctor
+						newAlias = alias
+						newCtorNum++
+					}
+
 				}
+			}
 
-			})
-			if (newCtor === undefined)
-				throw Error(`Join表达式有误，类型或别名与之前的Join冲突\r\nJoin(${ctors.map(c => c.name).join(',')}).ON(${on.compiled})`)
+
+			if (newCtorNum > 1)
+				throw Error(`Join表达式有误，一次Join调用只能有一个新的表\r\nJoin(${ctors.map(c => c.name).join(',')}).ON(${on.compiled})`)
+			else if (newCtorNum === 0)
+				throw Error(`Join表达式有误，没有找到新的关联表\r\nJoin(${ctors.map(c => c.name).join(',')}).ON(${on.compiled})`)
 
 			this.context.joins.push(new SqlTableJoin(newCtor, newAlias, on, joinType))
 			return this;
@@ -116,14 +128,11 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 		assertExpression(predicate)
 		assertArrowFunctionExpression(predicate.expression)
 		let errParam: ParameterExpressionNode
-		for (const i in predicate.expression.parameters) {
-			if (predicate.expression.parameters.hasOwnProperty(i)) {
-				const param = predicate.expression.parameters[i]
-				const exists = this.context.joins.some(j => j.Alias === param.name.escapedText)
-				if (!exists) {
-					errParam = param
-					break
-				}
+		for (const param of predicate.expression.parameters) {
+			const exists = this.context.joins.some(j => j.Alias === param.name.escapedText)
+			if (!exists) {
+				errParam = param
+				break
 			}
 		}
 
@@ -142,7 +151,12 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 	Select<T1, T2, T3, T4>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4) => any> | string): SqlExpr<T>
 	Select<T1, T2, T3, T4, T5>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => any> | string): SqlExpr<T>
 	Select<T1, T2, T3, T4, T5, T6>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => any> | string): SqlExpr<T> {
-		this.context.select = fields
+		assertExpression(fields)
+		if (isStringLiteral(fields.expression)) {
+			this.context.select = fields.compiled
+		} else {
+			this.context.select = fields
+		}
 		return this
 	}
 

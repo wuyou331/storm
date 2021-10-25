@@ -7,7 +7,6 @@
     "module": "commonjs",
     "target": "esnext",
     "experimentalDecorators": true,
-    "emitDecoratorMetadata":true,
     "noImplicitThis": true,    
     "plugins": [
       {
