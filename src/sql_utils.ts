@@ -79,7 +79,8 @@ export class SqlUtils {
             // lambda中直接访问变量
             return topExpr.context[expr.escapedText]
         }
-        else if (isNumericLiteral(expr) || isStringLiteral(expr)) return expr.text
+        else if (isNumericLiteral(expr)) return expr.text
+        else if (isStringLiteral(expr)) return `${context.sqlChar.CharacterQuotes}${expr.text}${context.sqlChar.CharacterQuotes}`
         else if (expr.kind === ExpressionKind.TrueKeyword) return "1"
         else if (expr.kind === ExpressionKind.FalseKeyword) return "0"
     }
@@ -93,16 +94,28 @@ export class SqlUtils {
         if (context.joins.length === 1)
             return expr.name.escapedText
         else {
-            const classAlias = expr.expression.escapedText
-            const i = context.joins.findIndex(j => j.Alias === classAlias)
-            if (i === -1)
-                throw Error(`未找到别名为${classAlias}的表`)
-            const ctor = context.joins[i].Ctor
-            const propertyAlias = expr.name.escapedText
-            const meta = getMeta(ctor, propertyAlias)
-            return `${expr.expression.escapedText}.${meta?.Alias ?? propertyAlias}`
+            const properAlias = SqlUtils.getFieldAlias(context, expr.expression.escapedText, expr.name.escapedText)
+            return `${expr.expression.escapedText}.${properAlias}`
         }
     }
+
+    /** 获取类属性别名 */
+    private static getFieldAlias(context: SqlExprContext, classAlias: string, propertyName: string) {
+        const i = context.joins.findIndex(j => j.Alias === classAlias)
+        if (i === -1)
+            throw Error(`未找到别名为${classAlias}的表`)
+        const ctor = context.joins[i].Ctor
+        return SqlUtils.getFieldAliasBtCtor(ctor, classAlias, propertyName)
+    }
+
+    /** 获取类属性别名 */
+    private static getFieldAliasBtCtor(ctor: new () => any, classAlias: string, propertyName: string) {
+        const propertyAlias = propertyName
+        const meta = getMeta(ctor, propertyAlias)
+        return meta?.Alias ?? propertyAlias
+    }
+
+
     /** 转换调用变量的属性访问,支持多级变量访问支持 */
     private static convertPropertyAccessByVar(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode) {
 
@@ -156,12 +169,16 @@ export class SqlUtils {
                     if (isShorthandPropertyAssignmentExpression(prop)) {
                         // eg: Select(i=>{i})
                         assertIdentifier(prop.name)
-                        selectStr.push(SqlUtils.convertSelectFieldByisIdentifier(context, prop.name))
+                        selectStr.push(SqlUtils.convertSelectFieldByIdentifier(context, prop.name))
                     } else if (isPropertyAssignmentExpression(prop)) {
                         assertIdentifier(prop.name)
                         if (isPropertyAccessExpression(prop.initializer)) {
                             selectStr.push(`${SqlUtils.convertVal(context, select, prop.initializer)} as ${prop.name.escapedText}`)
-                        } else {
+                        }
+                        else if (isStringLiteral(prop.initializer)) {
+                            selectStr.push(`${SqlUtils.convertVal(context, select, prop.initializer)} as ${prop.name.escapedText}`)
+                        }
+                        else {
                             throw Error("Select方法中有不能识别的列" + prop.name.escapedText)
                         }
 
@@ -172,7 +189,7 @@ export class SqlUtils {
 
             } else if (isIdentifier(expr)) {
                 // eg: Select(i=>i)
-                return SqlUtils.convertSelectFieldByisIdentifier(context, expr)
+                return SqlUtils.convertSelectFieldByIdentifier(context, expr)
             } else {
                 throw Error("Select方法中有不能识别的语法")
             }
@@ -180,29 +197,27 @@ export class SqlUtils {
 
     }
 
-    private static convertSelectFieldByisIdentifier(context: SqlExprContext, expr: IdentifierExpressionNode) {
+    private static convertSelectFieldByIdentifier(context: SqlExprContext, expr: IdentifierExpressionNode) {
         const select = context.select
-        const argName = expr.escapedText
-        if (select.expression.parameters.some(p => p.name.escapedText === argName)) {
-            const index = context.joins.findIndex(j => j.Alias === argName)
+        const classAlias = expr.escapedText
+        if (select.expression.parameters.some(p => p.name.escapedText === classAlias)) {
+            const index = context.joins.findIndex(j => j.Alias === classAlias)
             let ctor: new () => any
             if (index === -1) {
                 if (context.joins.length === 1) {
                     ctor = context.joins[0].Ctor
                 } else {
-                    throw Error(`Select方法有不能识别的别名'${argName}'`)
+                    throw Error(`Select方法有不能识别的别名'${classAlias}'`)
                 }
             } else {
                 ctor = context.joins[index].Ctor
             }
 
-
-
             const members = Object.getOwnPropertyNames(new ctor())
             if (context.joins.length === 1)
-                return members.join(',')
+                return members.map(m => `${SqlUtils.getFieldAliasBtCtor(ctor, classAlias, m)}`).join(',')
             else
-                return members.map(m => `${argName}.${m}`).join(",")
+                return members.map(m => `${classAlias}.${SqlUtils.getFieldAliasBtCtor(ctor, classAlias, m)}`).join(",")
         }
     }
 

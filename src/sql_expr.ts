@@ -6,6 +6,10 @@ type JoinType = "Left" | "Right" | "Full" | "Inner" | ""
 export class SqlTableJoin {
 	constructor(public Ctor: new () => any, public Alias?: string, public ON?: Expression<any>, public JoinMethod?: JoinType) { }
 }
+export interface SqlChar {
+	CharacterQuotes: string
+}
+
 
 export class SqlExprContext {
 	/** where条件集合 */
@@ -14,15 +18,20 @@ export class SqlExprContext {
 	public joins: SqlTableJoin[] = []
 	/** select 条件 */
 	public select: undefined | string | Expression<any>
+
+	constructor(public sqlChar: SqlChar) {
+
+	}
 }
 
+const _SQLCHAR: SqlChar = { CharacterQuotes: "'" }
 export class DefaultSqlExpr<T> implements SqlExpr<T>{
 
+	private context: SqlExprContext = new SqlExprContext(_SQLCHAR)
 	constructor(mianCtor: new () => T, alias?: string) {
 		this.context.joins.push(new SqlTableJoin(mianCtor, alias))
 	}
 
-	private context: SqlExprContext = new SqlExprContext()
 
 
 	// 方法签名需注意ctor2参数在接口中是必选的，但在实际的方法中是可选的
@@ -86,7 +95,7 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 
 			let newCtor: new () => any
 			let newAlias: string
-			let newCtorNum = 0
+			let newCtorNum: number = 0
 			for (const i in ctors) {
 				if (Object.prototype.hasOwnProperty.call(ctors, i)) {
 					const ctor = ctors[i];
@@ -102,14 +111,15 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 						newAlias = alias
 						newCtorNum++
 					}
-
+					if (newCtorNum > 1)
+						break;
 				}
 			}
 
 
 			if (newCtorNum > 1)
 				throw Error(`Join表达式有误，一次Join调用只能有一个新的表\r\nJoin(${ctors.map(c => c.name).join(',')}).ON(${on.compiled})`)
-			else if (newCtorNum === 0)
+			else if (newCtorNum < 1)
 				throw Error(`Join表达式有误，没有找到新的关联表\r\nJoin(${ctors.map(c => c.name).join(',')}).ON(${on.compiled})`)
 
 			this.context.joins.push(new SqlTableJoin(newCtor, newAlias, on, joinType))
