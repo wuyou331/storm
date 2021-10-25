@@ -4,6 +4,7 @@ import { SqlExprContext, SqlTableJoin } from "./sql_expr";
 
 export class SqlUtils {
 
+    static readonly NewLine = "\r\n"
 
     static convertJoin(context: SqlExprContext) {
         if (context.joins.length === 0) return ""
@@ -12,7 +13,7 @@ export class SqlUtils {
             if (i > 0) {
                 whereStr += `${join.JoinMethod.toLowerCase()} join ${SqlUtils.convertTableName(join)} on ${SqlUtils.convertCondition(context, join.ON)}`.trim()
                 if (i < context.joins.length - 1)
-                    whereStr += "\r\n"
+                    whereStr += SqlUtils.NewLine
             }
 
         });
@@ -57,7 +58,7 @@ export class SqlUtils {
         else if (partExpr.kind === ExpressionKind.FalseKeyword) return "1<>1";
     }
 
-    /** 转换条件表达式左右两边的值 */
+    /** 转换表达式的值 */
     static convertVal(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode) {
 
         if (isBinaryExpression(expr))
@@ -150,21 +151,27 @@ export class SqlUtils {
 
             if (isObjectLiteralExpression(expr)) {
                 // eg: Select(i=>{Id:id.Id})
-                let selectStr = []
+                const selectStr = []
                 for (const prop of expr.properties) {
                     if (isShorthandPropertyAssignmentExpression(prop)) {
+                        // eg: Select(i=>{i})
                         assertIdentifier(prop.name)
                         selectStr.push(SqlUtils.convertSelectFieldByisIdentifier(context, prop.name))
                     } else if (isPropertyAssignmentExpression(prop)) {
                         assertIdentifier(prop.name)
-                        assertPropertyAccessExpression(prop.initializer)
-                        selectStr.push(`${SqlUtils.convertVal(context,select,prop.initializer)} as ${prop.name.escapedText}`)
+                        if (isPropertyAccessExpression(prop.initializer)) {
+                            selectStr.push(`${SqlUtils.convertVal(context, select, prop.initializer)} as ${prop.name.escapedText}`)
+                        } else {
+                            throw Error("Select方法中有不能识别的列" + prop.name.escapedText)
+                        }
+
+
                     }
                 }
-                return selectStr
+                return selectStr.join(',')
 
             } else if (isIdentifier(expr)) {
-                // eg: Select(i=>{i})
+                // eg: Select(i=>i)
                 return SqlUtils.convertSelectFieldByisIdentifier(context, expr)
             } else {
                 throw Error("Select方法中有不能识别的语法")
@@ -178,8 +185,19 @@ export class SqlUtils {
         const argName = expr.escapedText
         if (select.expression.parameters.some(p => p.name.escapedText === argName)) {
             const index = context.joins.findIndex(j => j.Alias === argName)
-            if (index === -1) throw Error(`Select方法有不能识别的别名'${argName}'`)
-            const ctor = context.joins[index].Ctor
+            let ctor: new () => any
+            if (index === -1) {
+                if (context.joins.length === 1) {
+                    ctor = context.joins[0].Ctor
+                } else {
+                    throw Error(`Select方法有不能识别的别名'${argName}'`)
+                }
+            } else {
+                ctor = context.joins[index].Ctor
+            }
+
+
+
             const members = Object.getOwnPropertyNames(new ctor())
             if (context.joins.length === 1)
                 return members.join(',')

@@ -1,7 +1,11 @@
+import { alias } from "../src/meta"
+
+@alias("用户表")
 export class User {
-    Id: number
-    Name: string
-    Gender: boolean
+    @alias("userId")
+    public Id: number
+    public Name: string
+    public Gender: boolean
 }
 
 export class Blog {

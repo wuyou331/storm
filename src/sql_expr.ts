@@ -137,7 +137,7 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 		}
 
 		if (errParam) {
-			throw Error(`Where表达式中，有不存在的别名:'${errParam.name.escapedText}'\r\nWhere(${predicate.compiled})`)
+			throw Error(`Where表达式中，有不存在的别名:'${errParam.name.escapedText}'${SqlUtils.NewLine}Where(${predicate.compiled})`)
 		}
 		this.context.whereConditions.push(predicate)
 		return this
@@ -151,12 +151,17 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 	Select<T1, T2, T3, T4>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4) => any> | string): SqlExpr<T>
 	Select<T1, T2, T3, T4, T5>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => any> | string): SqlExpr<T>
 	Select<T1, T2, T3, T4, T5, T6>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => any> | string): SqlExpr<T> {
-		assertExpression(fields)
-		if (isStringLiteral(fields.expression)) {
-			this.context.select = fields.compiled
-		} else {
+		if (fields === undefined) {
 			this.context.select = fields
+		} else {
+			assertExpression(fields)
+			if (isStringLiteral(fields.expression)) {
+				this.context.select = fields.compiled
+			} else {
+				this.context.select = fields
+			}
 		}
+
 		return this
 	}
 
@@ -165,7 +170,7 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 		return [`select ${SqlUtils.convertSelect(this.context)} from ${SqlUtils.convertTableName(this.context.joins[0])}`,
 		SqlUtils.convertJoin(this.context),
 		SqlUtils.convertWhere(this.context)
-		].join("\r\n").trim()
+		].join(SqlUtils.NewLine).trim()
 	}
 }
 
