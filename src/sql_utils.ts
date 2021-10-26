@@ -110,9 +110,14 @@ export class SqlUtils {
 
     /** 获取类属性别名 */
     private static getFieldAliasBtCtor(ctor: new () => any, classAlias: string, propertyName: string) {
-        const propertyAlias = propertyName
-        const meta = getMeta(ctor, propertyAlias)
-        return meta?.Alias ?? propertyAlias
+        const meta = getMeta(ctor, propertyName)
+        return meta?.Alias ?? propertyName
+    }
+
+    /** 判断列是否在Select中被忽略 */
+    private static isSelectIgnore(ctor: new () => any, classAlias: string, propertyName: string): boolean {
+        const meta = getMeta(ctor, propertyName)
+        return meta.SelectIgnore
     }
 
 
@@ -196,7 +201,7 @@ export class SqlUtils {
         }
 
     }
-
+    /** select中列出某个对象所有字段 eg: Select(i=>{i}) */
     private static convertSelectFieldByIdentifier(context: SqlExprContext, expr: IdentifierExpressionNode) {
         const select = context.select
         const classAlias = expr.escapedText
@@ -215,9 +220,15 @@ export class SqlUtils {
 
             const members = Object.getOwnPropertyNames(new ctor())
             if (context.joins.length === 1)
-                return members.map(m => `${SqlUtils.getFieldAliasBtCtor(ctor, classAlias, m)}`).join(',')
+                return members
+                    .filter(m => !SqlUtils.isSelectIgnore(ctor, classAlias, m))
+                    .map(m => `${SqlUtils.getFieldAliasBtCtor(ctor, classAlias, m)}`)
+                    .join(',')
             else
-                return members.map(m => `${classAlias}.${SqlUtils.getFieldAliasBtCtor(ctor, classAlias, m)}`).join(",")
+                return members
+                    .filter(m => !SqlUtils.isSelectIgnore(ctor, classAlias, m))
+                    .map(m => `${classAlias}.${SqlUtils.getFieldAliasBtCtor(ctor, classAlias, m)}`)
+                    .join(",")
         }
     }
 

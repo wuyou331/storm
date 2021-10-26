@@ -64,7 +64,6 @@ test('select fields', () => {
 
     expect(From(Blog).Select(b => b).ToSql()).toEqual("select Id,UserId,Title from Blog");
 
-    
     expect(From(User).Select(u => u).ToSql()).toEqual("select user_id,Name,Gender from users");
 
     expect(From(Blog)
@@ -73,7 +72,6 @@ test('select fields', () => {
         .ToSql())
         .toEqual([`select b.Id,b.UserId,b.Title,u.Name as userName,'joe' as author from Blog as b`,
             `join users as u on b.UserId = u.user_id`].join(SqlUtils.NewLine))
-
 
 });
 

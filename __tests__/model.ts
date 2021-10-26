@@ -1,4 +1,4 @@
-import { alias } from "../src/meta"
+import { alias, ignore } from "../src/meta"
 
 @alias("users")
 export class User {
@@ -12,6 +12,8 @@ export class Blog {
     Id: number
     UserId: number
     Title: string
+    @ignore()
+    Context:string
 }
 
 export class Comment {
