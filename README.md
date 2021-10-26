@@ -1,2 +1,2 @@
-# storm
-Storm Is a Simple Typed ORM for TypeScript.
+# Storm
+Storm Is a Simply , Typed ORM for TypeScript.
