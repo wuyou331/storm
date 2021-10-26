@@ -9,23 +9,21 @@ Storm是一个简单，强类型基于TypeScript语言的ORM框架，提供一�
 
 ```typescript
 From(Blog).Where(b=>b.Title == "Hello World!") 
-```
-
-```sql 
-select * from Blog where Title == 'Hello World' 
+// select * from Blog where Title == 'Hello World' 
 ```
 
 
 ```typescript
 From(Blog).Where(b=>b.Title == "Hello World!").Select(b=>b)
-```
-```sql 
-select Id,Title,UserId from Blog where Title == 'Hello World' 
+// select Id,Title,UserId from Blog where Title == 'Hello World' 
 ```
 
 ```typescript
-From(Blog).Join.Where(b=>b.Title == "Hello World!").Select(b=>{Id:b.Id})
-```
-```sql 
-select Id,Title from Blog where Title == 'Hello World' 
+From(Blog)
+.Join(User).ON((b,u)=>b.Creator==u.Id)
+.Where<User>(u=>u.Name == "wuyou")
+.Select<Blog,User>((b,u)=>{b,Author:u.Name})
+// select b.Id,b.Title,u.Name as Author from Blog b
+// join User as u on b.CreatorId == u.Id
+// where u.Name == 'wuyou' 
 ```
