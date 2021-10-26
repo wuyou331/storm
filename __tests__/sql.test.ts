@@ -66,7 +66,10 @@ test('select fields', () => {
 
     expect(From(Blog).Select(b => ({ b, author: "joe" })).ToMergeSql()).toEqual("select Id,UserId,Title,'joe' as author from Blog");
 
-    expect(From(Blog).Select(b => ({ b, author: "joe" })).ToSql()).toEqual({ sql: "select Id,UserId,Title,? as author from Blog", parms: ["joe"] });
+    expect(From(Blog).Select(b => ({ b, author: "joe" })).ToSql()).toEqual({
+        sql: "select Id,UserId,Title,? as author from Blog",
+        parms: ["joe"]
+    });
 
     expect(From(User).Select(u => u).ToMergeSql()).toEqual("select user_id,Name,Gender from users");
 
@@ -82,8 +85,25 @@ test('select fields', () => {
 
 
 test('where', () => {
-    expect(From(Blog).Where(b => b.Id === 123).ToMergeSql()).toEqual(["select * from Blog", "where Id = 123"].join(SqlUtils.NewLine));
-    expect(From(Blog).Where(b => b.Id === 123).ToSql()).toEqual({ sql: ["select * from Blog", "where Id = ?"].join(SqlUtils.NewLine), parms: [123] });
+    expect(From(Blog).Where(b => b.Id === 123).ToMergeSql())
+        .toEqual(["select * from Blog"
+            , "where Id = 123"].join(SqlUtils.NewLine));
+
+    expect(From(Blog).Where(b => b.Id === 123).ToSql()).toEqual({
+        sql: ["select * from Blog",
+            "where Id = ?"].join(SqlUtils.NewLine),
+        parms: [123]
+    });
+
+
+    expect(From(Blog).Where(b => b.Title === "hello world!").ToMergeSql())
+        .toEqual(["select * from Blog",
+            "where Title = 'hello world!'"].join(SqlUtils.NewLine));
+    expect(From(Blog).Where(b => b.Title === "hello world!").ToSql()).toEqual({
+        sql: ["select * from Blog",
+            "where Title = ?"].join(SqlUtils.NewLine),
+        parms: ['hello world!']
+    });
 
 
 });
