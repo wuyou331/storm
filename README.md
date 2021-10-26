@@ -1,7 +1,7 @@
 # Storm
 Storm Is a Simple , Typed ORM for TypeScript.
 
-Storm是一个实用简单，强类型基于TypeScript语言的ORM框架，提供一套强类型的与SQL类似的DSL查询语法，只要会写SQL语句5分钟就可以上手，让你可以在使用SQL的直观开发直觉的同时，享受强类型带来的好处。
+Storm是一个简单，强类型基于TypeScript语言的ORM框架，提供一套强类型的类SQL查询语法，只要会写SQL语句5分钟就可以上手，让你可以在使用SQL的开发思想的同时，享受强类型带来的好处。
 
 ![demo](https://raw.githubusercontent.com/wuyou331/storm/main/demo.gif)
 
