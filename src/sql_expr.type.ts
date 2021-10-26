@@ -1,5 +1,10 @@
 import { Expression, ExpressionNode } from "tst-expression";
 
+export class ToSqlResult {
+	public sql: string
+	public parms: any[] = []
+
+}
 export interface SqlExpr<T> {
     Join<T1>(ctor2: new() => T1): SqlJoin2<T, T, T1>
     Join<T1, T2>(ctor1: new() => T1, ctor2: new() => T2): SqlJoin2<T, T1, T2>
@@ -55,7 +60,10 @@ export interface SqlExpr<T> {
 	Select<T1, T2, T3, T4, T5>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => any> | string): SqlExpr<T>
 	Select<T1, T2, T3, T4, T5, T6>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => any> | string): SqlExpr<T>
 
-    ToSql(): string
+	/** 讲参数和SQL语句合并 */
+    ToMergeSql(): string
+
+	ToSql(): ToSqlResult
 }
 
 

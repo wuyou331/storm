@@ -1,5 +1,5 @@
 import { assertArrowFunctionExpression, assertExpression, assertObjectLiteralExpression, Expression, ExpressionNode, isIdentifier, isObjectLiteralExpression, isParenthesizedExpression, isStringLiteral, ParameterExpressionNode } from "tst-expression";
-import { SqlExpr, SqlJoin2, SqlJoin3, SqlJoin4, SqlJoin5, SqlJoin6 } from "./sql_expr.type";
+import { SqlExpr, SqlJoin2, SqlJoin3, SqlJoin4, SqlJoin5, SqlJoin6, ToSqlResult } from "./sql_expr.type";
 import { SqlUtils } from './sql_utils';
 
 type JoinType = "Left" | "Right" | "Full" | "Inner" | ""
@@ -7,7 +7,10 @@ export class SqlTableJoin {
 	constructor(public Ctor: new () => any, public Alias?: string, public ON?: Expression<any>, public JoinMethod?: JoinType) { }
 }
 export interface SqlChar {
+	/** 字符格式的引号 */
 	CharacterQuotes: string
+	/** SQL参数占位符 */
+	ParameterPlaceholder: string
 }
 
 
@@ -24,7 +27,9 @@ export class SqlExprContext {
 	}
 }
 
-const _SQLCHAR: SqlChar = { CharacterQuotes: "'" }
+
+
+const _SQLCHAR: SqlChar = { CharacterQuotes: "'", ParameterPlaceholder: "?" }
 export class DefaultSqlExpr<T> implements SqlExpr<T>{
 
 	private context: SqlExprContext = new SqlExprContext(_SQLCHAR)
@@ -137,17 +142,19 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 	Where<T1, T2, T3, T4, T5, T6>(predicate: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => boolean>): SqlExpr<T> {
 		assertExpression(predicate)
 		assertArrowFunctionExpression(predicate.expression)
-		let errParam: ParameterExpressionNode
-		for (const param of predicate.expression.parameters) {
-			const exists = this.context.joins.some(j => j.Alias === param.name.escapedText)
-			if (!exists) {
-				errParam = param
-				break
+		if (this.context.joins.length > 1) {
+			let errParam: ParameterExpressionNode
+			for (const param of predicate.expression.parameters) {
+				const exists = this.context.joins.some(j => j.Alias === param.name.escapedText)
+				if (!exists) {
+					errParam = param
+					break
+				}
 			}
-		}
 
-		if (errParam) {
-			throw Error(`Where表达式中，有不存在的别名:'${errParam.name.escapedText}'${SqlUtils.NewLine}Where(${predicate.compiled})`)
+			if (errParam) {
+				throw Error(`Where表达式中，有不存在的别名:'${errParam.name.escapedText}'${SqlUtils.NewLine}Where(${predicate.compiled})`)
+			}
 		}
 		this.context.whereConditions.push(predicate)
 		return this
@@ -176,11 +183,24 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 	}
 
 
-	ToSql() {
+	ToMergeSql(): string {
 		return [`select ${SqlUtils.convertSelect(this.context)} from ${SqlUtils.convertTableName(this.context.joins[0])}`,
 		SqlUtils.convertJoin(this.context),
 		SqlUtils.convertWhere(this.context)
-		].join(SqlUtils.NewLine).trim()
+		]
+			.filter(s => s.length > 0)
+			.join(SqlUtils.NewLine).trim()
+	}
+
+	ToSql(): ToSqlResult {
+		const result = new ToSqlResult()
+		result.sql = [`select ${SqlUtils.convertSelect(this.context, result.parms)} from ${SqlUtils.convertTableName(this.context.joins[0])}`,
+		SqlUtils.convertJoin(this.context),
+		SqlUtils.convertWhere(this.context, result.parms)]
+			.filter(s => s.length > 0)
+			.join(SqlUtils.NewLine)
+			.trim()
+		return result
 	}
 }
 

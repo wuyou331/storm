@@ -26,4 +26,4 @@ export class Comment {
 From(Blog)
         .Join(User).ON((b, u) => b.UserId === u.Id)
         .Select<Blog, User>((b, u) => ({ b, userName: u.Name ,author:"joe"}))
-        .ToSql()
+        .ToMergeSql()

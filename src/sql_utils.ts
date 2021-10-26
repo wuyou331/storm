@@ -17,18 +17,18 @@ export class SqlUtils {
             }
 
         });
-        return whereStr
+        return whereStr.trim()
     }
 
-    static convertWhere(context: SqlExprContext) {
+    static convertWhere(context: SqlExprContext, parms?: any[]) {
         if (context.whereConditions.length === 0) return ""
         let whereStr = "where "
         context.whereConditions.forEach((expr, i) => {
-            whereStr += SqlUtils.convertCondition(context, expr)
+            whereStr += SqlUtils.convertCondition(context, expr, undefined, parms = parms)
             if (i < context.whereConditions.length - 1)
                 whereStr += " and "
         });
-        return whereStr
+        return whereStr.trim()
     }
 
     private static operatorMap: { [kind: number]: string } = {
@@ -45,21 +45,21 @@ export class SqlUtils {
     }
 
     /** 转换条件表达式 Where 或者 Join */
-    static convertCondition(context: SqlExprContext, topExpr: Expression<any>, partExpr?: ExpressionNode) {
+    static convertCondition(context: SqlExprContext, topExpr: Expression<any>, partExpr?: ExpressionNode, parms?: any[]) {
         assertExpression(topExpr)
         assertArrowFunctionExpression(topExpr.expression)
         if (partExpr == null) partExpr = topExpr.expression.body
         if (isBinaryExpression(partExpr))
             if (partExpr.operatorToken.kind === ExpressionKind.BarBarToken || partExpr.operatorToken.kind === ExpressionKind.AmpersandAmpersandToken)
-                return `(${SqlUtils.convertCondition(context, topExpr, partExpr.left)} ${SqlUtils.operatorMap[partExpr.operatorToken.kind]} ${this.convertCondition(context, topExpr, partExpr.right)})`
+                return `(${SqlUtils.convertCondition(context, topExpr, partExpr.left, parms)} ${SqlUtils.operatorMap[partExpr.operatorToken.kind]} ${this.convertCondition(context, topExpr, partExpr.right, parms)})`
             else
-                return `${SqlUtils.convertVal(context, topExpr, partExpr.left)} ${SqlUtils.operatorMap[partExpr.operatorToken.kind]} ${SqlUtils.convertVal(context, topExpr, partExpr.right)}`
+                return `${SqlUtils.convertVal(context, topExpr, partExpr.left, parms)} ${SqlUtils.operatorMap[partExpr.operatorToken.kind]} ${SqlUtils.convertVal(context, topExpr, partExpr.right, parms)}`
         else if (partExpr.kind === ExpressionKind.TrueKeyword) return "1==1";
         else if (partExpr.kind === ExpressionKind.FalseKeyword) return "1<>1";
     }
 
     /** 转换表达式的值 */
-    static convertVal(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode) {
+    static convertVal(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode, parms?: any[]) {
 
         if (isBinaryExpression(expr))
             SqlUtils.convertCondition(context, topExpr, expr)
@@ -77,10 +77,29 @@ export class SqlUtils {
             }
         } else if (isIdentifier(expr)) {
             // lambda中直接访问变量
-            return topExpr.context[expr.escapedText]
+            if (parms === undefined)
+                return topExpr.context[expr.escapedText]
+            else {
+                parms.push(topExpr.context[expr.escapedText])
+                return "?"
+            }
         }
-        else if (isNumericLiteral(expr)) return expr.text
-        else if (isStringLiteral(expr)) return `${context.sqlChar.CharacterQuotes}${expr.text}${context.sqlChar.CharacterQuotes}`
+        else if (isNumericLiteral(expr)) {
+            if (parms === undefined)
+                return expr.text
+            else {
+                parms.push(Number( expr.text))
+                return "?"
+            }
+        }
+        else if (isStringLiteral(expr)) {
+            if (parms === undefined)
+                return `${context.sqlChar.CharacterQuotes}${expr.text}${context.sqlChar.CharacterQuotes}`
+            else {
+                parms.push(expr.text)
+                return "?"
+            }
+        }
         else if (expr.kind === ExpressionKind.TrueKeyword) return "1"
         else if (expr.kind === ExpressionKind.FalseKeyword) return "0"
     }
@@ -152,12 +171,15 @@ export class SqlUtils {
         }
     }
 
-    static convertSelect(context: SqlExprContext) {
+    /** 转换sql语句 select 部分
+     * @parms 参数非null表示用参数化的方式输出sql语句且parms为参数数组
+     */
+    static convertSelect(context: SqlExprContext, parms?: any[]) {
         const select = context.select
         if (select === undefined) {
             return "*"
         } else if (typeof select === "string") {
-            return select
+            return select.trim()
         } else {
             assertExpression(select)
             assertArrowFunctionExpression(select.expression)
@@ -178,10 +200,10 @@ export class SqlUtils {
                     } else if (isPropertyAssignmentExpression(prop)) {
                         assertIdentifier(prop.name)
                         if (isPropertyAccessExpression(prop.initializer)) {
-                            selectStr.push(`${SqlUtils.convertVal(context, select, prop.initializer)} as ${prop.name.escapedText}`)
+                            selectStr.push(`${SqlUtils.convertVal(context, select, prop.initializer, parms)} as ${prop.name.escapedText}`)
                         }
                         else if (isStringLiteral(prop.initializer)) {
-                            selectStr.push(`${SqlUtils.convertVal(context, select, prop.initializer)} as ${prop.name.escapedText}`)
+                            selectStr.push(`${SqlUtils.convertVal(context, select, prop.initializer, parms)} as ${prop.name.escapedText}`)
                         }
                         else {
                             throw Error("Select方法中有不能识别的列" + prop.name.escapedText)
@@ -190,11 +212,11 @@ export class SqlUtils {
 
                     }
                 }
-                return selectStr.join(',')
+                return selectStr.join(',').trim()
 
             } else if (isIdentifier(expr)) {
                 // eg: Select(i=>i)
-                return SqlUtils.convertSelectFieldByIdentifier(context, expr)
+                return SqlUtils.convertSelectFieldByIdentifier(context, expr).trim()
             } else {
                 throw Error("Select方法中有不能识别的语法")
             }
