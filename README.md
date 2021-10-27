@@ -10,12 +10,12 @@ Storm是一个简单，强类型基于TypeScript语言的ORM框架，它没有�
 ### 简单查询
 ```typescript
 From(Blog).Where(b=>b.Title == "Hello World!") 
-// select * from Blog where Title == 'Hello World' 
+// select * from Blog where Title = 'Hello World' 
 ```
 ### 选择部分列
 ```typescript
 From(Blog).Where(b=>b.Title == "Hello World!").Select(b=>{id:b.Id,title:b.Title})
-// select Id,Title from Blog where Title == 'Hello World' 
+// select Id,Title from Blog where Title = 'Hello World' 
 ```
 ### 表关联自定义列
 ```typescript
@@ -25,5 +25,5 @@ From(Blog)
 .Select<Blog,User>((b,u)=>{b,Author:"Joe"})
 // select b.Id,b.Title,'Joe' as Author from Blog b
 // join User as u on b.Creator == u.Id
-// where u.Name == 'wuyou' 
+// where u.Name = 'wuyou' 
 ```
