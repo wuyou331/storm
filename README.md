@@ -7,17 +7,17 @@ Storm是一个简单，强类型基于TypeScript语言的ORM框架，它没有�
 
 ## Examples
 
-### 简单查询
+#### 简单查询
 ```typescript
 From(Blog).Where(b=>b.Title == "Hello World!") 
 // select * from Blog where Title = 'Hello World' 
 ```
-### 选择部分列
+#### 选择部分列
 ```typescript
 From(Blog).Where(b=>b.Title == "Hello World!").Select(b=>{id:b.Id,title:b.Title})
 // select Id,Title from Blog where Title = 'Hello World' 
 ```
-### 表关联自定义列
+#### 表关联自定义列
 ```typescript
 From(Blog)
 .Join(User).ON((b,u)=>b.Creator==u.Id)
