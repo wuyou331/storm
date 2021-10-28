@@ -1,5 +1,6 @@
 import { assertArrowFunctionExpression, assertExpression, assertObjectLiteralExpression, Expression, ExpressionNode, isIdentifier, isObjectLiteralExpression, isParenthesizedExpression, isStringLiteral, ParameterExpressionNode } from "tst-expression";
-import { SqlExpr, SqlJoin2, SqlJoin3, SqlJoin4, SqlJoin5, SqlJoin6, ToSqlResult } from "./sql_expr.type";
+import { Database } from "./database_type";
+import { SqlExpr, SqlJoin2, SqlJoin3, SqlJoin4, SqlJoin5, SqlJoin6, ParmSql } from "./sql_expr_type";
 import { SqlUtils } from './sql_utils';
 
 type JoinType = "Left" | "Right" | "Full" | "Inner" | ""
@@ -28,13 +29,17 @@ export class SqlExprContext {
 }
 
 
-
+/** SQL不同数据库的方言 */
 const _SQLCHAR: SqlChar = { CharacterQuotes: "'", ParameterPlaceholder: "?" }
-export class DefaultSqlExpr<T> implements SqlExpr<T>{
 
-	private context: SqlExprContext = new SqlExprContext(_SQLCHAR)
-	constructor(mianCtor: new () => T, alias?: string) {
+/** 默认表达式抽象类 */
+export abstract class DefaultSqlExpr<T> implements SqlExpr<T>{
+
+	protected context: SqlExprContext = new SqlExprContext(_SQLCHAR)
+	protected database: Database
+	constructor(mianCtor: new () => T, database: Database, alias?: string) {
 		this.context.joins.push(new SqlTableJoin(mianCtor, alias))
+		this.database = database
 	}
 
 
@@ -192,8 +197,8 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 			.join(SqlUtils.NewLine).trim()
 	}
 
-	ToSql(): ToSqlResult {
-		const result = new ToSqlResult()
+	ToSql(): ParmSql {
+		const result = new ParmSql()
 		result.sql = [`select ${SqlUtils.convertSelect(this.context, result.parms)} from ${SqlUtils.convertTableName(this.context.joins[0])}`,
 		SqlUtils.convertJoin(this.context),
 		SqlUtils.convertWhere(this.context, result.parms)]
@@ -202,6 +207,11 @@ export class DefaultSqlExpr<T> implements SqlExpr<T>{
 			.trim()
 		return result
 	}
+
+	GetList(): Promise<T[]>
+	GetList<TModel>(): Promise<TModel[]> {
+		const sql = this.ToSql();
+		return this.database.GetList(sql)
+	}
 }
 
-export const From = <T extends object>(ctor: new () => T, alias?: string): SqlExpr<T> => new DefaultSqlExpr<T>(ctor, alias)

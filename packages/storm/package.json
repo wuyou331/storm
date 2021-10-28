@@ -1,0 +1,24 @@
+{
+  "name": "storm",
+  "version": "0.0.1",
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {},
+  "dependencies": {
+    "reflect-metadata": "^0.1.13",
+    "tst-expression": "^1.0.2"
+  },
+  "jest": {
+    "preset": "ts-jest",
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/?(*.)(test).ts"
+    ],
+    "globals": {
+      "ts-jest": {
+        "compiler": "ttypescript"
+      }
+    }
+  }
+}

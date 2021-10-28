@@ -1,5 +1,6 @@
 import { alias, ignore } from "../src/meta"
 
+
 @alias("users")
 export class User {
     @alias("user_id")

@@ -1,13 +1,10 @@
 {
-  "ts-node": {
-    // This can be omitted when using ts-patch
-    "compiler": "ttypescript",
-  },
   "compilerOptions": {
     "module": "commonjs",
     "target": "esnext",
     "experimentalDecorators": true,
-    "noImplicitThis": true,    
+    "noImplicitThis": true,
+    "sourceMap": true,
     "plugins": [
       {
         "transform": "tst-expression-transformer"
@@ -15,7 +12,7 @@
     ]
   },
   "include": [
-    "src/*.ts",
-    "index.ts"
+    "packages/*/src/*.ts",
+    "packages/*/index.ts"
   ]
 }
