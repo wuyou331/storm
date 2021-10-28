@@ -52,7 +52,8 @@ export interface SqlExpr<T> {
 	Where<T1, T2, T3, T4, T5, T6>(predicate: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => boolean>): SqlExpr<T>
 
 	/** Select方法只能调用一次 */
-	Select(fields?: Expression<(m: T) => any> | string): SqlExpr<T>
+	Select(): SqlExpr<T>
+	Select<TReturn>(fields?: Expression<(m: T) => TReturn>): SqlExpr<T> | SqlExpr<TReturn>
 	Select<T1>(fields?: Expression<(m: T1) => any> | string): SqlExpr<T>
 	Select<T1, T2>(fields?: Expression<(t1: T1, t2: T2) => any> | string): SqlExpr<T>
 	Select<T1, T2, T3>(fields?: Expression<(t1: T1, t2: T2, t3: T3) => any> | string): SqlExpr<T>

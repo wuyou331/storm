@@ -69,13 +69,16 @@ test('select fields', () => {
         parms: ["joe"]
     });
 
-    expect(From(User).Select(u => u).ToMergeSql()).toEqual("select user_id,Name,Gender from users");
+    expect(From(User).Select(u => u).ToMergeSql()).toEqual("select user_id,name,Gender from users");
+
+
+    expect(From(User).Select(u => ({ id: u.Id, name: u.Name })).ToMergeSql()).toEqual("select user_id as id,name from users");
 
     expect(From(Blog)
         .Join(User).ON((b, u) => b.UserId === u.Id)
         .Select<Blog, User>((b, u) => ({ b, userName: u.Name, author: "joe" }))
         .ToMergeSql())
-        .toEqual([`select b.Id,b.UserId,b.Title,u.Name as userName,'joe' as author from Blog as b`,
+        .toEqual([`select b.Id,b.UserId,b.Title,u.name as userName,'joe' as author from Blog as b`,
             `join users as u on b.UserId = u.user_id`].join(SqlUtils.NewLine))
 
 });

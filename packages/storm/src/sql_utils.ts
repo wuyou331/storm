@@ -88,7 +88,7 @@ export class SqlUtils {
             if (parms === undefined)
                 return expr.text
             else {
-                parms.push(Number( expr.text))
+                parms.push(Number(expr.text))
                 return "?"
             }
         }
@@ -109,21 +109,26 @@ export class SqlUtils {
 
         assertPropertyAccessExpression(expr)
         assertIdentifier(expr.expression)
-
+        const properAlias = SqlUtils.getFieldAlias(context, expr.expression.escapedText, expr.name.escapedText)
         if (context.joins.length === 1)
-            return expr.name.escapedText
+            return properAlias
         else {
-            const properAlias = SqlUtils.getFieldAlias(context, expr.expression.escapedText, expr.name.escapedText)
+
             return `${expr.expression.escapedText}.${properAlias}`
         }
     }
 
     /** 获取类属性别名 */
     private static getFieldAlias(context: SqlExprContext, classAlias: string, propertyName: string) {
-        const i = context.joins.findIndex(j => j.Alias === classAlias)
-        if (i === -1)
-            throw Error(`未找到别名为${classAlias}的表`)
-        const ctor = context.joins[i].Ctor
+
+
+        let ctor = context.joins.length === 1 ? context.joins[0].Ctor : undefined
+        if (!ctor) {
+            const i = context.joins.findIndex(j => j.Alias === classAlias)
+            if (i === -1)
+                throw Error(`未找到别名为${classAlias}的表`)
+            ctor = context.joins[i].Ctor
+        }
         return SqlUtils.getFieldAliasBtCtor(ctor, classAlias, propertyName)
     }
 
@@ -200,10 +205,20 @@ export class SqlUtils {
                     } else if (isPropertyAssignmentExpression(prop)) {
                         assertIdentifier(prop.name)
                         if (isPropertyAccessExpression(prop.initializer)) {
-                            selectStr.push(`${SqlUtils.convertVal(context, select, prop.initializer, parms)} as ${prop.name.escapedText}`)
+                            const left = SqlUtils.convertVal(context, select, prop.initializer, parms)
+                            const right = prop.name.escapedText
+                            if (left === right)
+                                selectStr.push(right)
+                            else
+                                selectStr.push(`${left} as ${prop.name.escapedText}`)
                         }
                         else if (isStringLiteral(prop.initializer)) {
-                            selectStr.push(`${SqlUtils.convertVal(context, select, prop.initializer, parms)} as ${prop.name.escapedText}`)
+                            const left = SqlUtils.convertVal(context, select, prop.initializer, parms)
+                            const right = prop.name.escapedText
+                            if (left === right)
+                                selectStr.push(right)
+                            else
+                                selectStr.push(`${left} as ${prop.name.escapedText}`)
                         }
                         else {
                             throw Error("Select方法中有不能识别的列" + prop.name.escapedText)

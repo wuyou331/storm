@@ -5,6 +5,7 @@ import { alias, ignore } from "../src/meta"
 export class User {
     @alias("user_id")
     public Id: number
+    @alias("name")
     public Name: string
     public Gender: boolean
 }
