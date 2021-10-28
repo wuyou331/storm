@@ -1,12 +1,10 @@
 import { Blog, User, Comment } from "./model";
-import { From } from "../src/sql_expr";
 import { SqlUtils } from "../src/sql_utils";
-
+import { From } from "./mock_expr";
 
 
 
 test('from', () => {
-
     expect(From(Blog).ToMergeSql()).toEqual("select * from Blog");
     expect(From(Blog, "b").ToMergeSql()).toEqual("select * from Blog as b");
 
