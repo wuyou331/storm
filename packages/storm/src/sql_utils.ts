@@ -6,12 +6,12 @@ export class SqlUtils {
 
     static readonly NewLine = "\r\n"
 
-    static convertJoin(context: SqlExprContext) {
+    static join(context: SqlExprContext) {
         if (context.joins.length === 0) return ""
         let whereStr = ""
         context.joins.forEach((join, i) => {
             if (i > 0) {
-                whereStr += `${join.JoinMethod.toLowerCase()} join ${SqlUtils.convertTableName(join)} on ${SqlUtils.convertCondition(context, join.ON)}`.trim()
+                whereStr += `${join.JoinMethod.toLowerCase()} join ${SqlUtils.tableName(join)} on ${SqlUtils.convertCondition(context, join.ON)}`.trim()
                 if (i < context.joins.length - 1)
                     whereStr += SqlUtils.NewLine
             }
@@ -20,7 +20,16 @@ export class SqlUtils {
         return whereStr.trim()
     }
 
-    static convertWhere(context: SqlExprContext, parms?: any[]) {
+    static limit(context: SqlExprContext) {
+        if (!context.skip) return ""
+        let limit = `limit ${context.skip}`
+        if (!context.take) {
+            limit += `,${context.take}`
+        }
+        return limit.trim()
+    }
+
+    static where(context: SqlExprContext, parms?: any[]) {
         if (context.whereConditions.length === 0) return ""
         let whereStr = "where "
         context.whereConditions.forEach((expr, i) => {
@@ -166,7 +175,7 @@ export class SqlUtils {
             val = val[stackVal]
         return val
     }
-    static convertTableName(join: SqlTableJoin) {
+    static tableName(join: SqlTableJoin) {
         const meta = getMeta(join.Ctor)
         const name = meta?.Alias ?? join.Ctor.name
         if (join.Alias) {
@@ -179,7 +188,7 @@ export class SqlUtils {
     /** 转换sql语句 select 部分
      * @parms 参数非null表示用参数化的方式输出sql语句且parms为参数数组
      */
-    static convertSelect(context: SqlExprContext, parms?: any[]) {
+    static select(context: SqlExprContext, parms?: any[]) {
         const select = context.select
         if (select === undefined) {
             return "*"

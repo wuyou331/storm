@@ -10,18 +10,30 @@ export class SqliteDatabase implements storm.Database {
 
     }
 
-    public From<T extends object>(ctor: new () => T, alias?: string): storm.SqlExpr<T> {
+    public from<T extends object>(ctor: new () => T, alias?: string): storm.SqlExpr<T> {
         return new SqliteSqlExpr<T>(ctor, this, alias)
     }
 
 
-    public GetList<T>(sql: storm.ParmSql): Promise<T[]> {
+    public queryList<T>(sql: storm.ParmSql): Promise<T[]> {
         return new Promise<T[]>((resolve, reject) => {
             this.db.all(sql.sql, sql.parms, (err, rows) => {
                 if (err) {
                     reject(err)
                 } else {
                     resolve(rows)
+                }
+            });
+        });
+    }
+
+    public querySingle<T>(sql: storm.ParmSql): Promise<T> {
+        return new Promise<T>((resolve, reject) => {
+            this.db.all(sql.sql, sql.parms, (err, rows) => {
+                if (err) {
+                    reject(err)
+                } else {
+                    resolve(rows.length > 1 ? rows[0] : undefined)
                 }
             });
         });

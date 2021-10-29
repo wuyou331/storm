@@ -7,15 +7,18 @@ import { Blog } from './model';
 const db: Database = new SqliteDatabase("__tests__\\data.db")
 
 
-test('from', async () => {
-    const sql = db.From(Blog).Select((b: Blog) => ({ bId: b.Id }))
-
-    const rows = await sql.GetList()
-    for (const row of rows) {
-        expect(row).toHaveProperty("bId")
+test('queryList', async () => {
+    const sql = db.from(Blog).select((b: Blog) => ({ blogId: b.Id }))
+    for (const row of await sql.queryList()) {
+        expect(row).toHaveProperty("blogId")
     }
 
 
 });
 
 
+test('querySingle', async () => {
+    const sql = db.from(Blog).select((b: Blog) => ({ blogId: b.Id }))
+    expect(sql.querySingle()).resolves.toHaveProperty("blogId")
+
+});
