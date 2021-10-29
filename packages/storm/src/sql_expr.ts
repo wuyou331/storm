@@ -166,17 +166,21 @@ export abstract class DefaultSqlExpr<T> implements SqlExpr<T>{
 	}
 
 
-	Select(): SqlExpr<T>
-	Select<TReturn>(fields?: Expression<(m: T) => TReturn>): SqlExpr<T> | SqlExpr<TReturn>
-	Select<T1>(fields?: Expression<(m: T1) => any> | string): SqlExpr<T>
-	Select<T1, T2>(fields?: Expression<(t1: T1, t2: T2) => any> | string): SqlExpr<T>
-	Select<T1, T2, T3>(fields?: Expression<(t1: T1, t2: T2, t3: T3) => any> | string): SqlExpr<T>
-	Select<T1, T2, T3, T4>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4) => any> | string): SqlExpr<T>
-	Select<T1, T2, T3, T4, T5>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => any> | string): SqlExpr<T>
-	Select<T1, T2, T3, T4, T5, T6>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => any> | string): SqlExpr<T> {
+	Select(fields?: string): SqlExpr<T>
+	Select<TReturn>(fields: Expression<(m: T) => TReturn> | string): SqlExpr<T> | SqlExpr<TReturn>
+	Select<T1, TReturn>(fields?: Expression<(m: T1) => TReturn> | string): SqlExpr<T> | SqlExpr<TReturn>
+	Select<T1, T2, TReturn>(fields?: Expression<(t1: T1, t2: T2) => TReturn> | string): SqlExpr<T> | SqlExpr<TReturn>
+	Select<T1, T2, T3, TReturn>(fields?: Expression<(t1: T1, t2: T2, t3: T3) => TReturn> | string): SqlExpr<T> | SqlExpr<TReturn>
+	Select<T1, T2, T3, T4, TReturn>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4) => TReturn> | string): SqlExpr<T> | SqlExpr<TReturn>
+	Select<T1, T2, T3, T4, T5, TReturn>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => TReturn> | string): SqlExpr<T> | SqlExpr<TReturn>
+	Select<T1, T2, T3, T4, T5, T6, TReturn>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => TReturn> | string): SqlExpr<T> | SqlExpr<TReturn> {
 		if (fields === undefined) {
+			this.context.select = "*"
+		}
+		else if (typeof fields === "string") {
 			this.context.select = fields
-		} else {
+		}
+		else {
 			assertExpression(fields)
 			if (isStringLiteral(fields.expression)) {
 				this.context.select = fields.compiled
