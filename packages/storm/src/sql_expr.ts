@@ -226,8 +226,7 @@ export abstract class DefaultSqlExpr<T> implements SqlExpr<T>{
 		result.sql = [`select ${SqlUtils.select(this.context, result.parms)} from ${SqlUtils.tableName(this.context.joins[0])}`,
 		SqlUtils.join(this.context),
 		SqlUtils.where(this.context, result.parms),
-
-
+		SqlUtils.limit(this.context),
 		]
 			.filter(s => s.length > 0)
 			.join(SqlUtils.NewLine)
@@ -243,7 +242,7 @@ export abstract class DefaultSqlExpr<T> implements SqlExpr<T>{
 
 	querySingle(): Promise<T>
 	querySingle<TModel>(): Promise<TModel> {
-		if (!this.context.take) this.take(1)
+		this.take(1)
 		const sql = this.toSql();
 		return this.database.querySingle(sql)
 	}

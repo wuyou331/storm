@@ -40,7 +40,7 @@ export class SqliteDatabase implements storm.Database {
                 if (err) {
                     reject(err)
                 } else {
-                    resolve(rows.length > 1 ? rows[0] : undefined)
+                    resolve(rows.length > 0 ? rows[0] : undefined)
                 }
             });
         });

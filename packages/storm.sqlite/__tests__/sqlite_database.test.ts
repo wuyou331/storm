@@ -17,7 +17,7 @@ test('queryList', async () => {
 
 test('querySingle', async () => {
     const sql = db.from(Blog).select()
-    expect(sql.querySingle()).resolves.toHaveProperty("blogId")
+    expect( sql.querySingle()).resolves.not.toBeNull()
 
 });
 
