@@ -197,12 +197,14 @@ export abstract class DefaultSqlExpr<T> implements SqlExpr<T>{
 	}
 
 
-	skip(n: number) {
+	skip(n: number): SqlExpr<T> {
 		this.context.skip = n
+		return this;
 	}
-	take(n: number) {
+	take(n: number): SqlExpr<T> {
 		if (!this.context.skip) this.skip(0)
 		this.context.take = n
+		return this;
 	}
 
 

@@ -1,9 +1,11 @@
-import { alias, ignore } from "../src/meta"
+import { alias, ignore, insertIgnore, updateIgnore } from "../src/meta"
+import { selectIgnore } from './../src/meta';
 
 
 @alias("users")
 export class User {
     @alias("user_id")
+
     public Id: number
     @alias("name")
     public Name: string
@@ -11,10 +13,12 @@ export class User {
 }
 
 export class Blog {
+    @insertIgnore()
+    @updateIgnore()
     Id: number
     UserId: number
     Title: string
-    @ignore()
+    @selectIgnore()
     Context:string
 }
 

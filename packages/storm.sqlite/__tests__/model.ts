@@ -1,6 +1,10 @@
-import { alias } from "storm";
+import { alias, insertIgnore, updateIgnore } from "storm";
 
 export class Blog {
-    @alias("id")
-    public Id: number
+
+    @insertIgnore()
+    @updateIgnore()
+    public id: number
+
+    public name:string
 }

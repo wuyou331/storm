@@ -1,11 +1,14 @@
 import { assertArrowFunctionExpression, assertExpression, assertIdentifier, assertParameterExpression, assertPropertyAccessExpression, Expression, ExpressionKind, ExpressionNode, IdentifierExpressionNode, isBinaryExpression, isIdentifier, isNumericLiteral, isObjectLiteralExpression, isParenthesizedExpression, isPropertyAccessExpression, isPropertyAssignmentExpression, isShorthandPropertyAssignmentExpression, isStringLiteral } from "tst-expression";
-import { getMeta } from "./meta";
+import { isNumber } from "util";
+import { Meta } from "./meta";
 import { SqlExprContext, SqlTableJoin } from "./sql_expr";
+import { ParmSql } from "./sql_expr_type";
 
 export class SqlUtils {
 
     static readonly NewLine = "\r\n"
 
+    /** select语句的join部分 */
     static join(context: SqlExprContext) {
         if (context.joins.length === 0) return ""
         let whereStr = ""
@@ -20,15 +23,16 @@ export class SqlUtils {
         return whereStr.trim()
     }
 
+    /** select语句的limit部分 */
     static limit(context: SqlExprContext) {
-        if (!context.skip) return ""
+        if (context.skip === undefined) return ""
         let limit = `limit ${context.skip}`
-        if (!context.take) {
+        if (context.take !== undefined) {
             limit += `,${context.take}`
         }
         return limit.trim()
     }
-
+    /** select语句的where部分 */
     static where(context: SqlExprContext, parms?: any[]) {
         if (context.whereConditions.length === 0) return ""
         let whereStr = "where "
@@ -40,6 +44,7 @@ export class SqlUtils {
         return whereStr.trim()
     }
 
+    /** 条件表达式中的操作符集合 */
     private static operatorMap: { [kind: number]: string } = {
         [ExpressionKind.BarBarToken]: "or",
         [ExpressionKind.AmpersandAmpersandToken]: "and",
@@ -82,7 +87,7 @@ export class SqlUtils {
                 return SqlUtils.convertPropertyAccessByArgs(context, topExpr, expr)
             } else {
                 // 调用变量
-                return SqlUtils.convertPropertyAccessByVar(context, topExpr, expr)
+                return SqlUtils.propertyAccessByVar(context, topExpr, expr)
             }
         } else if (isIdentifier(expr)) {
             // lambda中直接访问变量
@@ -138,24 +143,24 @@ export class SqlUtils {
                 throw Error(`未找到别名为${classAlias}的表`)
             ctor = context.joins[i].Ctor
         }
-        return SqlUtils.getFieldAliasBtCtor(ctor, classAlias, propertyName)
+        return SqlUtils.getFieldAliasBtCtor(ctor, propertyName)
     }
 
     /** 获取类属性别名 */
-    private static getFieldAliasBtCtor(ctor: new () => any, classAlias: string, propertyName: string) {
-        const meta = getMeta(ctor, propertyName)
+    private static getFieldAliasBtCtor(ctor: new () => any, propertyName: string) {
+        const meta = Meta.getMeta(ctor, propertyName)
         return meta?.Alias ?? propertyName
     }
 
     /** 判断列是否在Select中被忽略 */
     private static isSelectIgnore(ctor: new () => any, classAlias: string, propertyName: string): boolean {
-        const meta = getMeta(ctor, propertyName)
+        const meta = Meta.getMeta(ctor, propertyName)
         return meta.SelectIgnore
     }
 
 
     /** 转换调用变量的属性访问,支持多级变量访问支持 */
-    private static convertPropertyAccessByVar(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode) {
+    private static propertyAccessByVar(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode) {
 
         assertPropertyAccessExpression(expr)
         //
@@ -175,14 +180,22 @@ export class SqlUtils {
             val = val[stackVal]
         return val
     }
+
+    /** 转换表名，用于select sql语句 */
     static tableName(join: SqlTableJoin) {
-        const meta = getMeta(join.Ctor)
-        const name = meta?.Alias ?? join.Ctor.name
+        const name = SqlUtils.tableNameByCtor(join.Ctor)
         if (join.Alias) {
             return `${name} as ${join.Alias}`;
         } else {
             return `${name}`;
         }
+    }
+
+    /** 获取表名，自动判断别名 */
+    static tableNameByCtor(ctor: new () => any) {
+        const meta = Meta.getMeta(ctor)
+        const name = meta?.Alias ?? ctor.name
+        return name
     }
 
     /** 转换sql语句 select 部分
@@ -210,7 +223,7 @@ export class SqlUtils {
                     if (isShorthandPropertyAssignmentExpression(prop)) {
                         // eg: Select(i=>{i})
                         assertIdentifier(prop.name)
-                        selectStr.push(SqlUtils.convertSelectFieldByIdentifier(context, prop.name))
+                        selectStr.push(SqlUtils.selectFieldByIdentifier(context, prop.name))
                     } else if (isPropertyAssignmentExpression(prop)) {
                         assertIdentifier(prop.name)
                         if (isPropertyAccessExpression(prop.initializer)) {
@@ -240,7 +253,7 @@ export class SqlUtils {
 
             } else if (isIdentifier(expr)) {
                 // eg: Select(i=>i)
-                return SqlUtils.convertSelectFieldByIdentifier(context, expr).trim()
+                return SqlUtils.selectFieldByIdentifier(context, expr).trim()
             } else {
                 throw Error("Select方法中有不能识别的语法")
             }
@@ -248,7 +261,7 @@ export class SqlUtils {
 
     }
     /** select中列出某个对象所有字段 eg: Select(i=>{i}) */
-    private static convertSelectFieldByIdentifier(context: SqlExprContext, expr: IdentifierExpressionNode) {
+    private static selectFieldByIdentifier(context: SqlExprContext, expr: IdentifierExpressionNode) {
         const select = context.select
         const classAlias = expr.escapedText
         if (select.expression.parameters.some(p => p.name.escapedText === classAlias)) {
@@ -264,18 +277,80 @@ export class SqlUtils {
                 ctor = context.joins[index].Ctor
             }
 
-            const members = Object.getOwnPropertyNames(new ctor())
+            const members = Meta.getMembers(ctor)
+
             if (context.joins.length === 1)
                 return members
-                    .filter(m => !SqlUtils.isSelectIgnore(ctor, classAlias, m))
-                    .map(m => `${SqlUtils.getFieldAliasBtCtor(ctor, classAlias, m)}`)
+                    .filter(member => !SqlUtils.isSelectIgnore(ctor, classAlias, member))
+                    .map(member => `${SqlUtils.getFieldAliasBtCtor(ctor, member)}`)
                     .join(',')
             else
                 return members
-                    .filter(m => !SqlUtils.isSelectIgnore(ctor, classAlias, m))
-                    .map(m => `${classAlias}.${SqlUtils.getFieldAliasBtCtor(ctor, classAlias, m)}`)
+                    .filter(member => !SqlUtils.isSelectIgnore(ctor, classAlias, member))
+                    .map(member => `${classAlias}.${SqlUtils.getFieldAliasBtCtor(ctor, member)}`)
                     .join(",")
         }
     }
 
+    /** 生成insert SQL语句 */
+    static insert<T extends object>(item: T, merge?: false): string
+    static insert<T extends object>(item: T, merge: true): ParmSql
+    static insert<T extends object>(item: T, merge?: boolean): string | ParmSql {
+        const ctor = item.constructor as new () => any
+        const tableName = SqlUtils.tableNameByCtor(ctor)
+        const columns = SqlUtils.insertColumns(ctor)
+
+        if (merge) {
+            const parms = []
+            const values = SqlUtils.insertValues(ctor, item, parms)
+            const sql = new ParmSql()
+            sql.sql = `insert into ${tableName} (${columns}) values (${values})`
+            sql.parms = parms
+            return sql
+
+        } else {
+            return `insert into ${tableName} (${columns}) values (${SqlUtils.insertValues(ctor, item)})`
+
+        }
+    }
+
+    static insertColumns(ctor: new () => any) {
+        const members = Meta.getMembers(ctor)
+        let conlums = ""
+        for (const member of members) {
+            const meta = Meta.getMeta(ctor, member)
+            if (!meta.InsertIgnore) {
+                if (conlums.length > 0) conlums += ","
+                const conlum = SqlUtils.getFieldAliasBtCtor(ctor, member)
+                conlums += conlum
+            }
+        }
+        return conlums
+    }
+
+    static insertValues<T>(ctor: new () => T, item: T, parms?: any[]) {
+        const members = Meta.getMembers(ctor)
+        let conlums = ""
+        for (const member of members) {
+            const meta = Meta.getMeta(ctor, member)
+            if (!meta.InsertIgnore) {
+                if (conlums.length > 0) conlums += ","
+                const value = item[member]
+                if (parms) {
+                    conlums += "?"
+                    parms.push(value ?? null)
+                } else {
+                    if (value === undefined)
+                        conlums += "null"
+                    else if (isNumber(value))
+                        conlums += value
+                    else {
+                        conlums += `'${value}'`
+                    }
+                }
+
+            }
+        }
+        return conlums
+    }
 }

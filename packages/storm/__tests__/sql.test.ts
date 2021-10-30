@@ -1,6 +1,7 @@
 import { Blog, User, Comment } from "./model";
 import { SqlUtils } from "../src/sql_utils";
 import { From as from } from "./mock_expr";
+import { ParmSql } from './../src/sql_expr_type';
 
 
 
@@ -96,7 +97,6 @@ test('where', () => {
         parms: [123]
     });
 
-
     expect(from(Blog).where(b => b.Title === "hello world!").toMergeSql())
         .toEqual(["select * from Blog",
             "where Title = 'hello world!'"].join(SqlUtils.NewLine));
@@ -110,6 +110,7 @@ test('where', () => {
 });
 
 test('skip & take', () => {
+
     expect(from(Blog).skip(1).toMergeSql())
         .toEqual(["select * from Blog"
             , "limit 1"].join(SqlUtils.NewLine));
@@ -122,4 +123,17 @@ test('skip & take', () => {
         .toEqual(["select * from Blog"
             , "limit 5,10"].join(SqlUtils.NewLine));
 
+});
+
+
+
+test('insert', () => {
+    const blog = new Blog()
+    blog.UserId = 1
+    blog.Title = "Hello World!"
+    expect(SqlUtils.insert(blog))
+        .toEqual("insert into Blog (UserId,Title,Context) values (1,'Hello World!',null)");
+
+    expect(SqlUtils.insert(blog, true))
+        .toEqual({ sql: "insert into Blog (UserId,Title,Context) values (?,?,?)", parms: [1, 'Hello World!', null] } as ParmSql);
 });

@@ -6,4 +6,7 @@ export interface Database {
 
     queryList<T>(sql: ParmSql): Promise<T[]>
     querySingle<T>(sql: ParmSql): Promise<T>
+
+    insert<T>(item: T): void
+    insert<T>(item: T, returnId: boolean): number
 }

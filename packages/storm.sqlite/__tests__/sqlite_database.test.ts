@@ -8,17 +8,20 @@ const db: Database = new SqliteDatabase("__tests__\\data.db")
 
 
 test('queryList', async () => {
-    const sql = db.from(Blog).select((b: Blog) => ({ blogId: b.Id }))
+    const sql = db.from(Blog).select((b: Blog) => ({ blogId: b.id }))
     for (const row of await sql.queryList()) {
         expect(row).toHaveProperty("blogId")
     }
-
-
 });
 
 
 test('querySingle', async () => {
-    const sql = db.from(Blog).select((b: Blog) => ({ blogId: b.Id }))
+    const sql = db.from(Blog).select()
     expect(sql.querySingle()).resolves.toHaveProperty("blogId")
 
 });
+
+
+test("insert",()=>{
+    db.insert(new Blog())
+})
