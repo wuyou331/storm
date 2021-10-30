@@ -294,8 +294,8 @@ export class SqlUtils {
 
     /** 生成insert SQL语句 */
     static insert<T extends object>(item: T, merge?: false): string
-    static insert<T extends object>(item: T, merge: true): ParmSql
-    static insert<T extends object>(item: T, merge?: boolean): string | ParmSql {
+    static insert<T extends object>(item: T, merge: true, lastIdSql?: string): ParmSql
+    static insert<T extends object>(item: T, merge?: boolean, lastIdSql?: string): string | ParmSql {
         const ctor = item.constructor as new () => any
         if (ctor.name === "Object") throw new Error("insert方法只支持通过构造函数new出来的对象")
         const tableName = SqlUtils.tableNameByCtor(ctor)
@@ -307,10 +307,15 @@ export class SqlUtils {
             const sql = new ParmSql()
             sql.sql = `insert into ${tableName} (${columns}) values (${values})`
             sql.parms = parms
+            if (lastIdSql)
+                sql.sql += `;${this.NewLine}${lastIdSql}`
             return sql
 
         } else {
-            return `insert into ${tableName} (${columns}) values (${SqlUtils.insertValues(ctor, item)})`
+            let sql = `insert into ${tableName} (${columns}) values (${SqlUtils.insertValues(ctor, item)})`
+            if (lastIdSql)
+                sql += `;${this.NewLine}${lastIdSql}`
+            return sql
 
         }
     }
@@ -354,4 +359,6 @@ export class SqlUtils {
         }
         return conlums
     }
+
+    SelectI
 }
