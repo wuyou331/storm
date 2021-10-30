@@ -17,11 +17,17 @@ test('queryList', async () => {
 
 test('querySingle', async () => {
     const sql = db.from(Blog).select()
-    expect( sql.querySingle()).resolves.not.toBeNull()
+    await expect(sql.querySingle()).resolves.not.toBeNull()
 
 });
 
 
-test("insert",()=>{
-    db.insert(new Blog())
+test("insert", () => {
+    const blog = new Blog()
+    blog.name = "Hello World!"
+
+    expect(db.insert(blog)).toBe(undefined)
+
+    expect(()=>db.insert({ name: "Hello World!" } as Blog)).toThrowError(new Error("insert方法只支持通过构造函数new出来的对象"))
+
 })

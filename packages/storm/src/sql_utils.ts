@@ -297,6 +297,7 @@ export class SqlUtils {
     static insert<T extends object>(item: T, merge: true): ParmSql
     static insert<T extends object>(item: T, merge?: boolean): string | ParmSql {
         const ctor = item.constructor as new () => any
+        if (ctor.name === "Object") throw new Error("insert方法只支持通过构造函数new出来的对象")
         const tableName = SqlUtils.tableNameByCtor(ctor)
         const columns = SqlUtils.insertColumns(ctor)
 

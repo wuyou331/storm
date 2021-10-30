@@ -13,7 +13,9 @@ export class SqliteDatabase implements storm.Database {
     insert<T>(item: T): void;
     insert<T>(item: T, returnId: boolean): number;
     insert<T extends ObjectConstructor>(item: T, returnId?: boolean): number | void {
-        console.info(SqlUtils.insert(item))
+        const parmSql = SqlUtils.insert(item, true)
+        const stmt = this.db.prepare(parmSql.sql)
+        stmt.run(parmSql.parms)
     }
 
     public from<T extends object>(ctor: new () => T, alias?: string): storm.SqlExpr<T> {
