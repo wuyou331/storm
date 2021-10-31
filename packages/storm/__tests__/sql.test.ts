@@ -136,4 +136,15 @@ test('insert', () => {
 
     expect(SqlUtils.insert(blog, true))
         .toEqual({ sql: "insert into Blog (UserId,Title,Context) values (?,?,?)", parms: [1, 'Hello World!', null] } as ParmSql);
+
+
 });
+
+
+
+test("update", () => {
+    const blog = new Blog()
+    blog.UserId = 1
+    blog.Title = "Hello World!"
+    SqlUtils.update(blog, it => it.Id === 1)
+})

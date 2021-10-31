@@ -3,6 +3,7 @@ import { isNumber } from "util";
 import { Meta } from "./meta";
 import { SqlExprContext, SqlTableJoin } from "./sql_expr";
 import { ParmSql } from "./sql_expr_type";
+import { updateIgnore } from 'storm';
 
 export class SqlUtils {
 
@@ -32,7 +33,9 @@ export class SqlUtils {
         }
         return limit.trim()
     }
-    /** select语句的where部分 */
+    /** select语句的where部分
+     * @parms  参数化sql语句中参数部分
+    */
     static where(context: SqlExprContext, parms?: any[]) {
         if (context.whereConditions.length === 0) return ""
         let whereStr = "where "
@@ -292,6 +295,8 @@ export class SqlUtils {
         }
     }
 
+
+    //#region 
     /** 生成insert SQL语句 */
     static insert<T extends object>(item: T, merge?: false): string
     static insert<T extends object>(item: T, merge: true, lastIdSql?: string): ParmSql
@@ -348,7 +353,7 @@ export class SqlUtils {
                 } else {
                     if (value === undefined)
                         conlums += "null"
-                    else if (isNumber(value))
+                    else if (typeof value === 'number')
                         conlums += value
                     else {
                         conlums += `'${value}'`
@@ -359,6 +364,44 @@ export class SqlUtils {
         }
         return conlums
     }
+    //#endregion
 
-    SelectI
+
+    static update<T>(item: T, where: (p: T) => boolean) {
+        const ctor = item.constructor as new () => T
+        if (ctor.name === "Object") throw new Error("update方法只支持通过构造函数new出来的对象")
+        const tableName = SqlUtils.tableNameByCtor(ctor)
+        const set = SqlUtils.updateAllColumns(ctor, item)
+        //     const whereStr = SqlUtils.where(new SqlExprContext())
+        let sql = `update ${tableName} set ${set}`
+
+        return sql
+    }
+
+    static updateAllColumns<T>(ctor: new () => T, item: T) {
+        const members = Meta.getMembers(ctor)
+        let conlums = ""
+        for (const member of members) {
+            const meta = Meta.getMeta(ctor, member)
+            if (!meta.UpdateIgnore) {
+                if (conlums.length > 0) conlums += ","
+                const conlum = SqlUtils.getFieldAliasBtCtor(ctor, member)
+                const value = item[member]
+                let valueStr = ""
+                if (value === undefined)
+                    valueStr = "null"
+                else if (typeof value === 'number')
+                    valueStr = `${value}`
+                else
+                    valueStr = `'${value}'`
+
+                conlums += `${conlum} = ${valueStr}`
+            }
+        }
+        return conlums
+    }
+
+    static updateFields<T>(fields: Expression<() => T>, where: (p: T) => boolean) {
+
+    }
 }

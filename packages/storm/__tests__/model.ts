@@ -19,7 +19,7 @@ export class Blog {
     UserId: number
     Title: string
     @selectIgnore()
-    Context:string
+    Context?:string
 }
 
 export class Comment {

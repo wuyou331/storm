@@ -9,5 +9,5 @@ export interface Database {
 
     insert<T>(item: T): Promise<void>;
     insert<T>(item: T, returnId: boolean): Promise<number>;
-    insert<T extends ObjectConstructor>(item: T, returnId?: boolean): Promise<number> | Promise<void> 
+    insert<T extends ObjectConstructor>(item: T, returnId?: boolean): Promise<number> | Promise<void>
 }
