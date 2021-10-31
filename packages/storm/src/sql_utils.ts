@@ -3,7 +3,7 @@ import { isNumber } from "util";
 import { Meta } from "./meta";
 import { SqlExprContext, SqlTableJoin } from "./sql_expr";
 import { ParmSql } from "./sql_expr_type";
-import { updateIgnore } from 'storm';
+import { updateIgnore, _SQLCHAR } from 'storm';
 
 export class SqlUtils {
 
@@ -367,13 +367,17 @@ export class SqlUtils {
     //#endregion
 
 
-    static update<T>(item: T, where: (p: T) => boolean) {
+    static update<T>(item: T, where: Expression<(p: T) => boolean>) {
         const ctor = item.constructor as new () => T
         if (ctor.name === "Object") throw new Error("update方法只支持通过构造函数new出来的对象")
         const tableName = SqlUtils.tableNameByCtor(ctor)
         const set = SqlUtils.updateAllColumns(ctor, item)
-        //     const whereStr = SqlUtils.where(new SqlExprContext())
-        let sql = `update ${tableName} set ${set}`
+        var context = new SqlExprContext(_SQLCHAR)
+        var joinTable = new SqlTableJoin(ctor)
+        context.joins.push(joinTable)
+        context.whereConditions.push(where)
+        const whereStr = SqlUtils.where(context)
+        let sql = `update ${tableName} set ${set} ${whereStr}`
 
         return sql
     }

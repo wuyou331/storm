@@ -35,7 +35,7 @@ export class SqlExprContext {
 
 
 /** SQL不同数据库的方言 */
-const _SQLCHAR: SqlChar = { CharacterQuotes: "'", ParameterPlaceholder: "?" }
+export const _SQLCHAR: SqlChar = { CharacterQuotes: "'", ParameterPlaceholder: "?" }
 
 /** 默认表达式抽象类 */
 export abstract class DefaultSqlExpr<T> implements SqlExpr<T>{
