@@ -1,7 +1,13 @@
 import { ExpressionKind, ExpressionNode, IdentifierExpressionNode } from "tst-expression";
 
 
-export function IsAsExpression(expr: ExpressionNode): expr is AsExpression {
+export function assertAsExpression(expr: ExpressionNode): expr is AsExpression {
+    if (expr.kind !== ExpressionKind.AsExpression) {
+        throw new Error("Argument is not an AsExpression.")
+    } else
+        return true
+}
+export function isAsExpression(expr: ExpressionNode): expr is AsExpression {
     return expr.kind === ExpressionKind.AsExpression
 }
 

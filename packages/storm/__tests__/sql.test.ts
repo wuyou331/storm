@@ -148,6 +148,7 @@ test("update", () => {
     const blog = new Blog()
     blog.UserId = 1
     blog.Title = "Hello World!"
+
     expect(SqlUtils.updateAll(blog))
         .toEqual("update Blog set UserId = 1,Title = 'Hello World!',Context = null");
 
@@ -156,9 +157,9 @@ test("update", () => {
             , "where Id = 1"].join(SqlUtils.NewLine));
 
     expect(SqlUtils.updateFields({ Title: "abc" } as Blog, b => b.Id === 1))
-        .toEqual(["update Blog set UserId = 1,Title = 'Hello World!',Context = null"
+        .toEqual(["update Blog set Title = 'abc'"
             , "where Id = 1"].join(SqlUtils.NewLine));
 
     expect(SqlUtils.updateAllFields({ Title: "abc" } as Blog))
-        .toEqual("update Blog set UserId = 1,Title = 'Hello World!',Context = null");
+        .toEqual("update Blog set Title = 'abc'");
 })

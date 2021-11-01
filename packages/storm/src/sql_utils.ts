@@ -4,7 +4,7 @@ import { Meta } from "./meta";
 import { SqlExprContext, SqlTableJoin } from "./sql_expr";
 import { ParmSql } from "./sql_expr_type";
 import { updateIgnore, _SQLCHAR } from 'storm';
-import { AsExpression, IsAsExpression } from './tsexpr_type';
+import { AsExpression, isAsExpression, assertAsExpression } from './tsexpr_type';
 
 export class SqlUtils {
 
@@ -68,6 +68,7 @@ export class SqlUtils {
         assertExpression(topExpr)
         assertArrowFunctionExpression(topExpr.expression)
         if (partExpr == null) partExpr = topExpr.expression.body
+
         if (isBinaryExpression(partExpr))
             if (partExpr.operatorToken.kind === ExpressionKind.BarBarToken || partExpr.operatorToken.kind === ExpressionKind.AmpersandAmpersandToken)
                 return `(${SqlUtils.convertCondition(context, topExpr, partExpr.left, parms)} ${SqlUtils.operatorMap[partExpr.operatorToken.kind]} ${this.convertCondition(context, topExpr, partExpr.right, parms)})`
@@ -320,7 +321,7 @@ export class SqlUtils {
             obj = item.compiled as T;
             ctor = obj.constructor as new () => T
         }
-        else if (IsAsExpression(item.expression)) {
+        else if (isAsExpression(item.expression)) {
             ctor = item.context[item.expression.type.typeName.escapedText]
             obj = item.compiled as T
         } else {
@@ -415,7 +416,9 @@ export class SqlUtils {
      * @param where 
      * @returns 
      */
-    static updateFields<T extends object>(fields: Expression<T>, where: (p: T) => boolean) {
+    static updateFields<T extends object>(fields: Expression<T>, where: Expression<(p: T) => boolean>) {
+        assertExpression(fields)
+        assertAsExpression(fields.expression)
         const { ctor, obj } = this.getUpdateCtor(fields)
         return this.updateSql(ctor, obj, Object.keys(obj), where)
     }
@@ -427,33 +430,40 @@ export class SqlUtils {
      * @returns 
      */
     static updateAllFields<T extends object>(fields: Expression<T>) {
+        assertExpression(fields)
+        assertAsExpression(fields.expression)
         const { ctor, obj } = this.getUpdateCtor(fields)
         return this.updateSql(ctor, obj, Object.keys(obj))
     }
 
-    /** update表达式中获取构造函数和对象 */
-    private static getUpdateCtor<T extends object>(item: T | Expression<T>) {
+    /** update表达式中获取构造函数和对象 
+     * @param item any类型是因为如果用表达式树类型会被编译器再次转义
+     */
+    private static getUpdateCtor(item: any) {
         assertExpression(item)
-        let ctor: new () => T
-        let obj: T
+        let ctor: new () => any
+        let obj: any
         if (isIdentifier(item.expression)) {
-            obj = item.compiled as T;
-            ctor = obj.constructor as new () => T
+            obj = item.compiled as any;
+            ctor = obj.constructor as new () => any
         }
-        else if (IsAsExpression(item.expression)) {
+        else if (isAsExpression(item.expression)) {
             ctor = item.context[item.expression.type.typeName.escapedText]
-            obj = item.compiled as T
+            obj = item.compiled as any
         } else {
             throw new Error("不支持的调用方式")
         }
         return { ctor, obj }
     }
 
-    /** 生成update SQL语句的方法 */
-    private static updateSql<T extends object>(ctor: new () => T, obj: T, members: string[], where?: Expression<(p: T) => boolean>) {
+    /** 生成update SQL语句的方法 
+     * @param where any类型是因为如果用表达式树类型会被编译器再次转义
+     */
+    private static updateSql<T extends object>(ctor: new () => T, obj: T, members: string[], where?: any) {
 
         let whereStr = ""
         if (where) {
+            assertExpression(where)
             const context = new SqlExprContext(_SQLCHAR)
             const joinTable = new SqlTableJoin(ctor)
             context.joins.push(joinTable)
@@ -461,7 +471,7 @@ export class SqlUtils {
             whereStr = SqlUtils.where(context)
         }
         const sql = [
-            `update ${SqlUtils.tableNameByCtor(ctor)} set ${SqlUtils.updateSet(ctor, obj, Meta.getMembers(ctor))}`,
+            `update ${SqlUtils.tableNameByCtor(ctor)} set ${SqlUtils.updateSet(ctor, obj, members)}`,
             `${whereStr}`]
             .filter(s => s.length > 0)
             .join(this.NewLine)
