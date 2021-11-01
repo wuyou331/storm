@@ -134,9 +134,11 @@ test('insert', () => {
     expect(SqlUtils.insert(blog))
         .toEqual("insert into Blog (UserId,Title,Context) values (1,'Hello World!',null)");
 
-    expect(SqlUtils.insert(blog, true))
-        .toEqual({ sql: "insert into Blog (UserId,Title,Context) values (?,?,?)", parms: [1, 'Hello World!', null] } as ParmSql);
+    expect(SqlUtils.insert({ UserId: 1, Title: blog.Title } as Blog))
+        .toEqual("insert into Blog (UserId,Title,Context) values (1,'Hello World!',null)");
 
+    expect(SqlUtils.insert({ UserId: 1, Title: blog.Title } as Blog, true))
+        .toEqual({ sql: "insert into Blog (UserId,Title,Context) values (?,?,?)", parms: [1, 'Hello World!', null] } as ParmSql);
 
 });
 
@@ -146,5 +148,13 @@ test("update", () => {
     const blog = new Blog()
     blog.UserId = 1
     blog.Title = "Hello World!"
-    SqlUtils.update(blog, it => it.Id === 1)
+    expect(SqlUtils.updateAll(blog))
+        .toEqual("update Blog set UserId = 1,Title = 'Hello World!',Context = null");
+
+    expect(SqlUtils.update(blog, b => b.Id === 1))
+        .toEqual(["update Blog set UserId = 1,Title = 'Hello World!',Context = null"
+            , "where Id = 1"].join(SqlUtils.NewLine));
+
+    SqlUtils.updateFields(() => ({ Title: "abc" }) as Blog, b => b.Id === 1)
+
 })

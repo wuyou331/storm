@@ -1,9 +1,10 @@
 import { assertArrowFunctionExpression, assertExpression, assertIdentifier, assertParameterExpression, assertPropertyAccessExpression, Expression, ExpressionKind, ExpressionNode, IdentifierExpressionNode, isBinaryExpression, isIdentifier, isNumericLiteral, isObjectLiteralExpression, isParenthesizedExpression, isPropertyAccessExpression, isPropertyAssignmentExpression, isShorthandPropertyAssignmentExpression, isStringLiteral } from "tst-expression";
-import { isNumber } from "util";
+import { isFunction, isNumber } from "util";
 import { Meta } from "./meta";
 import { SqlExprContext, SqlTableJoin } from "./sql_expr";
 import { ParmSql } from "./sql_expr_type";
 import { updateIgnore, _SQLCHAR } from 'storm';
+import { AsExpression, IsAsExpression } from './tsexpr_type';
 
 export class SqlUtils {
 
@@ -33,9 +34,10 @@ export class SqlUtils {
         }
         return limit.trim()
     }
+
     /** select语句的where部分
-     * @parms  参数化sql语句中参数部分
-    */
+     * @param parms  参数化sql语句中参数部分
+     */
     static where(context: SqlExprContext, parms?: any[]) {
         if (context.whereConditions.length === 0) return ""
         let whereStr = "where "
@@ -296,19 +298,34 @@ export class SqlUtils {
     }
 
 
-    //#region 
-    /** 生成insert SQL语句 */
-    static insert<T extends object>(item: T, merge?: false): string
-    static insert<T extends object>(item: T, merge: true, lastIdSql?: string): ParmSql
-    static insert<T extends object>(item: T, merge?: boolean, lastIdSql?: string): string | ParmSql {
-        const ctor = item.constructor as new () => any
-        if (ctor.name === "Object") throw new Error("insert方法只支持通过构造函数new出来的对象")
+    //#region isnert语句
+    /** 生成insert SQL语句
+     *  
+     */
+    static insert<T extends object>(item: T | Expression<() => T>, merge?: false): string
+    static insert<T extends object>(item: T | Expression<() => T>, merge: true, lastIdSql?: string): ParmSql
+    static insert<T extends object>(item: T | Expression<() => T>, merge?: boolean, lastIdSql?: string): string | ParmSql {
+        assertExpression(item)
+        let ctor: new () => T
+        let obj: T
+        if (isIdentifier(item.expression)) {
+            obj = item.compiled as T;
+            ctor = obj.constructor as new () => T
+        }
+        else if (IsAsExpression(item.expression)) {
+            ctor = item.context[item.expression.type.typeName.escapedText]
+            obj = item.compiled as T
+        }else{
+            throw new Error("不支持的调用方式")
+        }
+
+
         const tableName = SqlUtils.tableNameByCtor(ctor)
         const columns = SqlUtils.insertColumns(ctor)
 
         if (merge) {
             const parms = []
-            const values = SqlUtils.insertValues(ctor, item, parms)
+            const values = SqlUtils.insertValues(ctor, obj, parms)
             const sql = new ParmSql()
             sql.sql = `insert into ${tableName} (${columns}) values (${values})`
             sql.parms = parms
@@ -317,7 +334,7 @@ export class SqlUtils {
             return sql
 
         } else {
-            let sql = `insert into ${tableName} (${columns}) values (${SqlUtils.insertValues(ctor, item)})`
+            let sql = `insert into ${tableName} (${columns}) values (${SqlUtils.insertValues(ctor, obj)})`
             if (lastIdSql)
                 sql += `;${this.NewLine}${lastIdSql}`
             return sql
@@ -366,19 +383,35 @@ export class SqlUtils {
     }
     //#endregion
 
-
+    //#region  update语句
+    /**
+     * 生成update语句
+     * @param item 
+     * @param where 如果无需条件更新全表，需传ALL字符串，以免事务
+     * @returns 
+     */
     static update<T>(item: T, where: Expression<(p: T) => boolean>) {
         const ctor = item.constructor as new () => T
-        if (ctor.name === "Object") throw new Error("update方法只支持通过构造函数new出来的对象")
-        const tableName = SqlUtils.tableNameByCtor(ctor)
-        const set = SqlUtils.updateAllColumns(ctor, item)
-        var context = new SqlExprContext(_SQLCHAR)
-        var joinTable = new SqlTableJoin(ctor)
+        if (ctor.name === "Object") throw new Error("只支持通过构造函数new出来的对象")
+        let whereStr = ""
+        const context = new SqlExprContext(_SQLCHAR)
+        const joinTable = new SqlTableJoin(ctor)
         context.joins.push(joinTable)
         context.whereConditions.push(where)
-        const whereStr = SqlUtils.where(context)
-        let sql = `update ${tableName} set ${set} ${whereStr}`
+        whereStr = SqlUtils.where(context)
+        const sql = [
+            `update ${SqlUtils.tableNameByCtor(ctor)} set ${SqlUtils.updateAllColumns(ctor, item)}`,
+            `${whereStr}`]
+            .filter(s => s.length > 0)
+            .join(this.NewLine)
+        return sql
+    }
 
+    static updateAll<T>(item: T) {
+        const ctor = item.constructor as new () => T
+        if (ctor.name === "Object") throw new Error("只支持通过构造函数new出来的对象")
+
+        const sql = `update ${SqlUtils.tableNameByCtor(ctor)} set ${SqlUtils.updateAllColumns(ctor, item)}`
         return sql
     }
 
@@ -408,4 +441,5 @@ export class SqlUtils {
     static updateFields<T>(fields: Expression<() => T>, where: (p: T) => boolean) {
 
     }
+    //#endregion
 }
