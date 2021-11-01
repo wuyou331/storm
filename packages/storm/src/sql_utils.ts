@@ -308,9 +308,12 @@ export class SqlUtils {
      *  SqlUtils.insert({ UserId: 1, Title: blog.Title } as Blog)
      *  ```
      */
-    static insert<T extends object>(item: T | Expression<() => T>, merge?: false): string
-    static insert<T extends object>(item: T | Expression<() => T>, merge: true, lastIdSql?: string): ParamSql
     static insert<T extends object>(item: T | Expression<() => T>, merge?: boolean, lastIdSql?: string): string | ParamSql {
+        return SqlUtils.insertExpr(item, merge, lastIdSql)
+    }
+
+
+    static insertExpr<T extends object>(item: T , merge?: boolean, lastIdSql?: string): string | ParamSql {
         assertExpression(item)
         let ctor: new () => T
         let obj: T

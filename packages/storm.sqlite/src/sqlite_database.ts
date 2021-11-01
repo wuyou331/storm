@@ -1,8 +1,8 @@
 
+import { Expression } from "tst-expression";
 import * as sqlite3 from 'sqlite3';
 import * as storm from 'storm';
-import { SqliteSqlExpr } from './sqlite_expr';
-import { SqlUtils } from './../../storm/src/sql_utils';
+import { SqliteSqlExpr } from "./sqlite_expr";
 
 export class SqliteDatabase implements storm.Database {
     private readonly db: sqlite3.Database
@@ -10,14 +10,15 @@ export class SqliteDatabase implements storm.Database {
         this.db = new sqlite3.Database(connStr);
 
     }
-    insert<T>(item: T): Promise<undefined>;
-    insert<T>(item: T, returnId: boolean): Promise<number>;
-    insert<T extends ObjectConstructor>(item: T, returnId?: boolean): Promise<number> | Promise<undefined> {
-        const parmSql = returnId ? SqlUtils.insert(item, true) : SqlUtils.insert(item, true)
+    insert<T extends object>(item: T | Expression<() => T>): Promise<undefined>;
+    insert<T extends object>(item: T | Expression<() => T>, returnId: boolean): Promise<number>;
+    insert<T extends object>(item: T | Expression<() => T>, returnId?: boolean): Promise<number> | Promise<undefined> {
 
-        const stmt: sqlite3.Statement | sqlite3.RunResult = this.db.prepare(parmSql.sql)
+        const paramSql = storm.SqlUtils.insertExpr(item, true) as storm.ParamSql
+
+        const stmt: sqlite3.Statement | sqlite3.RunResult = this.db.prepare(paramSql.sql)
         return new Promise<number>((resolve, reject) => {
-            stmt.run(parmSql.params, (err, row) => {
+            stmt.run(paramSql.params, (err, row) => {
                 if (err) {
                     reject(err)
                 } else {
@@ -27,6 +28,7 @@ export class SqliteDatabase implements storm.Database {
         });
 
     }
+
 
 
 

@@ -1,3 +1,4 @@
+import { Expression } from "tst-expression";
 import { ParamSql, SqlExpr } from "./sql_expr_type";
 
 
@@ -7,7 +8,7 @@ export interface Database {
     queryList<T>(sql: ParamSql): Promise<T[]>
     querySingle<T>(sql: ParamSql): Promise<T>
 
-    insert<T>(item: T): Promise<void>;
-    insert<T>(item: T, returnId: boolean): Promise<number>;
-    insert<T extends ObjectConstructor>(item: T, returnId?: boolean): Promise<number> | Promise<void>
+    insert<T extends object>(item: T | Expression<() => T>): Promise<undefined>;
+    insert<T extends object>(item: T | Expression<() => T>, returnId: boolean): Promise<number>;
+    insert<T extends object>(item: T | Expression<() => T>, returnId?: boolean): Promise<number> | Promise<undefined> 
 }

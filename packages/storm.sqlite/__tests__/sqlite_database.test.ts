@@ -25,9 +25,8 @@ test('querySingle', async () => {
 test("insert", async () => {
     const blog = new Blog()
     blog.name = "Hello World!"
-
     await expect(db.insert(blog)).resolves.toBeGreaterThan(0)
     await expect(db.insert(blog, true)).resolves.toBeGreaterThan(0)
-    await expect(() => db.insert({ name: "Hello World!" } as Blog)).toThrowError(new Error("insert方法只支持通过构造函数new出来的对象"))
+    await expect(db.insert({ name: "Hello World!" } as Blog)).resolves.toBeGreaterThan(0)
 
 })
