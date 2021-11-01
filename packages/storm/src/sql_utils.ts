@@ -300,7 +300,15 @@ export class SqlUtils {
 
     //#region isnert语句
     /** 生成insert SQL语句
-     *  
+     *  @example
+     *  ```typescript
+     *  const blog = new Blog()
+     *  blog.UserId = 1
+     *  blog.Title = "Hello World!"
+     *  SqlUtils.insert(blog)
+     *  or
+     *  SqlUtils.insert({ UserId: 1, Title: blog.Title } as Blog)
+     *  ```
      */
     static insert<T extends object>(item: T | Expression<() => T>, merge?: false): string
     static insert<T extends object>(item: T | Expression<() => T>, merge: true, lastIdSql?: string): ParmSql
@@ -315,17 +323,18 @@ export class SqlUtils {
         else if (IsAsExpression(item.expression)) {
             ctor = item.context[item.expression.type.typeName.escapedText]
             obj = item.compiled as T
-        }else{
+        } else {
             throw new Error("不支持的调用方式")
         }
 
 
+        const fields = Meta.getMembers(ctor)
         const tableName = SqlUtils.tableNameByCtor(ctor)
-        const columns = SqlUtils.insertColumns(ctor)
+        const columns = SqlUtils.insertColumns(ctor, fields)
 
         if (merge) {
             const parms = []
-            const values = SqlUtils.insertValues(ctor, obj, parms)
+            const values = SqlUtils.insertValues(ctor, obj, fields, parms)
             const sql = new ParmSql()
             sql.sql = `insert into ${tableName} (${columns}) values (${values})`
             sql.parms = parms
@@ -334,7 +343,7 @@ export class SqlUtils {
             return sql
 
         } else {
-            let sql = `insert into ${tableName} (${columns}) values (${SqlUtils.insertValues(ctor, obj)})`
+            let sql = `insert into ${tableName} (${columns}) values (${SqlUtils.insertValues(ctor, obj, fields)})`
             if (lastIdSql)
                 sql += `;${this.NewLine}${lastIdSql}`
             return sql
@@ -342,28 +351,26 @@ export class SqlUtils {
         }
     }
 
-    static insertColumns(ctor: new () => any) {
-        const members = Meta.getMembers(ctor)
+    static insertColumns(ctor: new () => any, fields: string[]) {
         let conlums = ""
-        for (const member of members) {
-            const meta = Meta.getMeta(ctor, member)
+        for (const field of fields) {
+            const meta = Meta.getMeta(ctor, field)
             if (!meta.InsertIgnore) {
                 if (conlums.length > 0) conlums += ","
-                const conlum = SqlUtils.getFieldAliasBtCtor(ctor, member)
+                const conlum = SqlUtils.getFieldAliasBtCtor(ctor, field)
                 conlums += conlum
             }
         }
         return conlums
     }
 
-    static insertValues<T>(ctor: new () => T, item: T, parms?: any[]) {
-        const members = Meta.getMembers(ctor)
+    static insertValues<T>(ctor: new () => T, item: T, fields: string[], parms?: any[]) {
         let conlums = ""
-        for (const member of members) {
-            const meta = Meta.getMeta(ctor, member)
+        for (const field of fields) {
+            const meta = Meta.getMeta(ctor, field)
             if (!meta.InsertIgnore) {
                 if (conlums.length > 0) conlums += ","
-                const value = item[member]
+                const value = item[field]
                 if (parms) {
                     conlums += "?"
                     parms.push(value ?? null)
@@ -383,47 +390,100 @@ export class SqlUtils {
     }
     //#endregion
 
-    //#region  update语句
+    //#region update语句
     /**
-     * 生成update语句
-     * @param item 
-     * @param where 如果无需条件更新全表，需传ALL字符串，以免事务
+     * 生成update语句，会更新对象所有的列
+     * @returns 返回完整的update语句
+     * @example
+     */
+    static update<T extends object>(item: T | Expression<T>, where: Expression<(p: T) => boolean>) {
+        const { ctor, obj } = this.getUpdateCtor(item)
+        return this.updateSql(ctor, obj, Meta.getMembers(ctor), where)
+    }
+    /**
+     * 生成update语句，会更新对象所有的列，并且没有where条件，全表更新
+     * @returns 返回完整的update语句
+     * @example
+     */
+    static updateAll<T extends object>(item: T | Expression<T>) {
+        const { ctor, obj } = this.getUpdateCtor(item)
+        return this.updateSql(ctor, obj, Meta.getMembers(ctor))
+    }
+    /**
+     * 生成update语句，更新部分列
+     * @param fields 
+     * @param where 
      * @returns 
      */
-    static update<T>(item: T, where: Expression<(p: T) => boolean>) {
-        const ctor = item.constructor as new () => T
-        if (ctor.name === "Object") throw new Error("只支持通过构造函数new出来的对象")
+    static updateFields<T extends object>(fields: Expression<T>, where: (p: T) => boolean) {
+        const { ctor, obj } = this.getUpdateCtor(fields)
+        return this.updateSql(ctor, obj, Object.keys(obj), where)
+    }
+
+    /**
+     * 生成update语句，更新部分列，并且没有where条件，全表更新
+     * @param fields 
+     * @param where 
+     * @returns 
+     */
+    static updateAllFields<T extends object>(fields: Expression<T>) {
+        const { ctor, obj } = this.getUpdateCtor(fields)
+        return this.updateSql(ctor, obj, Object.keys(obj))
+    }
+
+    /** update表达式中获取构造函数和对象 */
+    private static getUpdateCtor<T extends object>(item: T | Expression<T>) {
+        assertExpression(item)
+        let ctor: new () => T
+        let obj: T
+        if (isIdentifier(item.expression)) {
+            obj = item.compiled as T;
+            ctor = obj.constructor as new () => T
+        }
+        else if (IsAsExpression(item.expression)) {
+            ctor = item.context[item.expression.type.typeName.escapedText]
+            obj = item.compiled as T
+        } else {
+            throw new Error("不支持的调用方式")
+        }
+        return { ctor, obj }
+    }
+
+    /** 生成update SQL语句的方法 */
+    private static updateSql<T extends object>(ctor: new () => T, obj: T, members: string[], where?: Expression<(p: T) => boolean>) {
+
         let whereStr = ""
-        const context = new SqlExprContext(_SQLCHAR)
-        const joinTable = new SqlTableJoin(ctor)
-        context.joins.push(joinTable)
-        context.whereConditions.push(where)
-        whereStr = SqlUtils.where(context)
+        if (where) {
+            const context = new SqlExprContext(_SQLCHAR)
+            const joinTable = new SqlTableJoin(ctor)
+            context.joins.push(joinTable)
+            context.whereConditions.push(where)
+            whereStr = SqlUtils.where(context)
+        }
         const sql = [
-            `update ${SqlUtils.tableNameByCtor(ctor)} set ${SqlUtils.updateAllColumns(ctor, item)}`,
+            `update ${SqlUtils.tableNameByCtor(ctor)} set ${SqlUtils.updateSet(ctor, obj, Meta.getMembers(ctor))}`,
             `${whereStr}`]
             .filter(s => s.length > 0)
             .join(this.NewLine)
         return sql
     }
 
-    static updateAll<T>(item: T) {
-        const ctor = item.constructor as new () => T
-        if (ctor.name === "Object") throw new Error("只支持通过构造函数new出来的对象")
+    /**
+     * 生成更新语句的Set部分
+     * @param ctor 对象构造方法
+     * @param item 更新的对象
+     * @param fields 需要出现的字段
+     * @returns 返回set部分内容
+     */
+    static updateSet<T>(ctor: new () => T, item: T, fields: string[]) {
 
-        const sql = `update ${SqlUtils.tableNameByCtor(ctor)} set ${SqlUtils.updateAllColumns(ctor, item)}`
-        return sql
-    }
-
-    static updateAllColumns<T>(ctor: new () => T, item: T) {
-        const members = Meta.getMembers(ctor)
         let conlums = ""
-        for (const member of members) {
-            const meta = Meta.getMeta(ctor, member)
+        for (const field of fields) {
+            const meta = Meta.getMeta(ctor, field)
             if (!meta.UpdateIgnore) {
                 if (conlums.length > 0) conlums += ","
-                const conlum = SqlUtils.getFieldAliasBtCtor(ctor, member)
-                const value = item[member]
+                const conlum = SqlUtils.getFieldAliasBtCtor(ctor, field)
+                const value = item[field]
                 let valueStr = ""
                 if (value === undefined)
                     valueStr = "null"
@@ -438,8 +498,6 @@ export class SqlUtils {
         return conlums
     }
 
-    static updateFields<T>(fields: Expression<() => T>, where: (p: T) => boolean) {
 
-    }
     //#endregion
 }

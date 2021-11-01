@@ -155,6 +155,10 @@ test("update", () => {
         .toEqual(["update Blog set UserId = 1,Title = 'Hello World!',Context = null"
             , "where Id = 1"].join(SqlUtils.NewLine));
 
-    SqlUtils.updateFields(() => ({ Title: "abc" }) as Blog, b => b.Id === 1)
+    expect(SqlUtils.updateFields({ Title: "abc" } as Blog, b => b.Id === 1))
+        .toEqual(["update Blog set UserId = 1,Title = 'Hello World!',Context = null"
+            , "where Id = 1"].join(SqlUtils.NewLine));
 
+    expect(SqlUtils.updateAllFields({ Title: "abc" } as Blog))
+        .toEqual("update Blog set UserId = 1,Title = 'Hello World!',Context = null");
 })
