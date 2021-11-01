@@ -17,7 +17,7 @@ export class SqliteDatabase implements storm.Database {
 
         const stmt: sqlite3.Statement | sqlite3.RunResult = this.db.prepare(parmSql.sql)
         return new Promise<number>((resolve, reject) => {
-            stmt.run(parmSql.parms, (err, row) => {
+            stmt.run(parmSql.params, (err, row) => {
                 if (err) {
                     reject(err)
                 } else {
@@ -36,9 +36,9 @@ export class SqliteDatabase implements storm.Database {
     }
 
 
-    public queryList<T>(sql: storm.ParmSql): Promise<T[]> {
+    public queryList<T>(sql: storm.ParamSql): Promise<T[]> {
         return new Promise<T[]>((resolve, reject) => {
-            this.db.all(sql.sql, sql.parms, (err, rows) => {
+            this.db.all(sql.sql, sql.params, (err, rows) => {
                 if (err) {
                     reject(err)
                 } else {
@@ -48,9 +48,9 @@ export class SqliteDatabase implements storm.Database {
         });
     }
 
-    public querySingle<T>(sql: storm.ParmSql): Promise<T> {
+    public querySingle<T>(sql: storm.ParamSql): Promise<T> {
         return new Promise<T>((resolve, reject) => {
-            this.db.all(sql.sql, sql.parms, (err, rows) => {
+            this.db.all(sql.sql, sql.params, (err, rows) => {
                 if (err) {
                     reject(err)
                 } else {

@@ -1,6 +1,6 @@
 import { assertArrowFunctionExpression, assertExpression, Expression, isStringLiteral, ParameterExpressionNode } from "tst-expression";
 import { Database } from "./database_type";
-import { SqlExpr, SqlJoin2, SqlJoin3, SqlJoin4, SqlJoin5, SqlJoin6, ParmSql } from "./sql_expr_type";
+import { SqlExpr, SqlJoin2, SqlJoin3, SqlJoin4, SqlJoin5, SqlJoin6, ParamSql } from "./sql_expr_type";
 import { SqlUtils } from './sql_utils';
 
 type JoinType = "Left" | "Right" | "Full" | "Inner" | ""
@@ -221,11 +221,11 @@ export abstract class DefaultSqlExpr<T> implements SqlExpr<T>{
 			.join(SqlUtils.NewLine).trim()
 	}
 
-	toSql(): ParmSql {
-		const result = new ParmSql()
-		result.sql = [`select ${SqlUtils.select(this.context, result.parms)} from ${SqlUtils.tableName(this.context.joins[0])}`,
+	toSql(): ParamSql {
+		const result = new ParamSql()
+		result.sql = [`select ${SqlUtils.select(this.context, result.params)} from ${SqlUtils.tableName(this.context.joins[0])}`,
 		SqlUtils.join(this.context),
-		SqlUtils.where(this.context, result.parms),
+		SqlUtils.where(this.context, result.params),
 		SqlUtils.limit(this.context),
 		]
 			.filter(s => s.length > 0)

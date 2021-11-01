@@ -2,7 +2,7 @@ import { assertArrowFunctionExpression, assertExpression, assertIdentifier, asse
 import { isFunction, isNumber } from "util";
 import { Meta } from "./meta";
 import { SqlExprContext, SqlTableJoin } from "./sql_expr";
-import { ParmSql } from "./sql_expr_type";
+import { ParamSql } from "./sql_expr_type";
 import { updateIgnore, _SQLCHAR } from 'storm';
 import { AsExpression, isAsExpression, assertAsExpression } from './tsexpr_type';
 
@@ -303,17 +303,14 @@ export class SqlUtils {
     /** 生成insert SQL语句
      *  @example
      *  ```typescript
-     *  const blog = new Blog()
-     *  blog.UserId = 1
-     *  blog.Title = "Hello World!"
      *  SqlUtils.insert(blog)
      *  or
      *  SqlUtils.insert({ UserId: 1, Title: blog.Title } as Blog)
      *  ```
      */
     static insert<T extends object>(item: T | Expression<() => T>, merge?: false): string
-    static insert<T extends object>(item: T | Expression<() => T>, merge: true, lastIdSql?: string): ParmSql
-    static insert<T extends object>(item: T | Expression<() => T>, merge?: boolean, lastIdSql?: string): string | ParmSql {
+    static insert<T extends object>(item: T | Expression<() => T>, merge: true, lastIdSql?: string): ParamSql
+    static insert<T extends object>(item: T | Expression<() => T>, merge?: boolean, lastIdSql?: string): string | ParamSql {
         assertExpression(item)
         let ctor: new () => T
         let obj: T
@@ -336,9 +333,9 @@ export class SqlUtils {
         if (merge) {
             const parms = []
             const values = SqlUtils.insertValues(ctor, obj, fields, parms)
-            const sql = new ParmSql()
+            const sql = new ParamSql()
             sql.sql = `insert into ${tableName} (${columns}) values (${values})`
-            sql.parms = parms
+            sql.params = parms
             if (lastIdSql)
                 sql.sql += `;${this.NewLine}${lastIdSql}`
             return sql
@@ -393,51 +390,75 @@ export class SqlUtils {
 
     //#region update语句
     /**
-     * 生成update语句，会更新对象所有的列
+     * 生成update语句，会更新所有字段
      * @returns 返回完整的update语句
      * @example
+     * SqlUtils.updateAll(blog, b => b.Id === 1)
      */
-    static update<T extends object>(item: T | Expression<T>, where: Expression<(p: T) => boolean>) {
+    static update<T extends object>(item: T | Expression<T>, where: Expression<(p: T) => boolean>, merge?: boolean): string | ParamSql {
         const { ctor, obj } = this.getUpdateCtor(item)
-        return this.updateSql(ctor, obj, Meta.getMembers(ctor), where)
+        if (merge) {
+            return this.updateSql(ctor, obj, Meta.getMembers(ctor), where, merge)
+        } else {
+            return this.updateSql(ctor, obj, Meta.getMembers(ctor), where)
+        }
     }
+
+    return
     /**
-     * 生成update语句，会更新对象所有的列，并且没有where条件，全表更新
+     * 生成update语句，会权标更新所有字段
      * @returns 返回完整的update语句
      * @example
+     * SqlUtils.updateAll(blog)
      */
-    static updateAll<T extends object>(item: T | Expression<T>) {
+    static updateAll<T extends object>(item: T | Expression<T>, merge?: boolean): string | ParamSql {
         const { ctor, obj } = this.getUpdateCtor(item)
-        return this.updateSql(ctor, obj, Meta.getMembers(ctor))
+        if (merge) {
+            return this.updateSql(ctor, obj, Meta.getMembers(ctor), null, merge)
+        } else {
+            return this.updateSql(ctor, obj, Meta.getMembers(ctor))
+        }
     }
     /**
-     * 生成update语句，更新部分列
-     * @param fields 
-     * @param where 
-     * @returns 
+     * 生成update语句，只更新部分字段
+     * @param fields 对象字段
+     * @param where 更新条件
+     * @example
+     * SqlUtils.updateFields({ Title: "abc" } as Blog, b => b.Id === 1)
      */
-    static updateFields<T extends object>(fields: Expression<T>, where: Expression<(p: T) => boolean>) {
+    static updateFields<T extends object>(fields: Expression<T>, where: Expression<(p: T) => boolean>, merge?: boolean) {
         assertExpression(fields)
         assertAsExpression(fields.expression)
         const { ctor, obj } = this.getUpdateCtor(fields)
-        return this.updateSql(ctor, obj, Object.keys(obj), where)
+        if (merge) {
+            return this.updateSql(ctor, obj, Object.keys(obj), where, merge)
+        } else {
+            return this.updateSql(ctor, obj, Object.keys(obj), where)
+        }
     }
 
     /**
-     * 生成update语句，更新部分列，并且没有where条件，全表更新
-     * @param fields 
-     * @param where 
-     * @returns 
+     * 生成update语句，只更新部分列，并且没有where条件，全表更新
+     * @param fields 需更新的列
+     * @example
+     * SqlUtils.updateFields({ Title: "abc" } as Blog)
      */
-    static updateAllFields<T extends object>(fields: Expression<T>) {
+    static updateAllFields<T extends object>(fields: Expression<T>, merge?: boolean) {
         assertExpression(fields)
         assertAsExpression(fields.expression)
         const { ctor, obj } = this.getUpdateCtor(fields)
-        return this.updateSql(ctor, obj, Object.keys(obj))
+        if (merge) {
+            return this.updateSql(ctor, obj, Object.keys(obj), null, merge)
+        } else {
+            return this.updateSql(ctor, obj, Object.keys(obj))
+        }
+
     }
 
-    /** update表达式中获取构造函数和对象 
+    /** update表达式中获取构造函数和对象
      * @param item any类型是因为如果用表达式树类型会被编译器再次转义
+     * @example
+     * SqlUtils.updateAllFields({ Title: "abc" } as Blog)
      */
     private static getUpdateCtor(item: any) {
         assertExpression(item)
@@ -456,26 +477,40 @@ export class SqlUtils {
         return { ctor, obj }
     }
 
-    /** 生成update SQL语句的方法 
+    /** 生成update SQL语句的方法
      * @param where any类型是因为如果用表达式树类型会被编译器再次转义
      */
-    private static updateSql<T extends object>(ctor: new () => T, obj: T, members: string[], where?: any) {
+    private static updateSql<T extends object>(ctor: new () => T, obj: T, members: string[], where?: any, merge?: boolean): string | ParamSql {
 
         let whereStr = ""
+        let sets = ""
+        const parms: [] = []
+        if (merge) {
+            sets = SqlUtils.updateSet(ctor, obj, members, parms)
+        } else {
+            sets = SqlUtils.updateSet(ctor, obj, members)
+        }
+
         if (where) {
             assertExpression(where)
             const context = new SqlExprContext(_SQLCHAR)
             const joinTable = new SqlTableJoin(ctor)
             context.joins.push(joinTable)
             context.whereConditions.push(where)
-            whereStr = SqlUtils.where(context)
+            if (merge) {
+                whereStr = SqlUtils.where(context, parms)
+            } else {
+                whereStr = SqlUtils.where(context)
+            }
+
         }
         const sql = [
-            `update ${SqlUtils.tableNameByCtor(ctor)} set ${SqlUtils.updateSet(ctor, obj, members)}`,
+            `update ${SqlUtils.tableNameByCtor(ctor)} set ${sets}`,
             `${whereStr}`]
             .filter(s => s.length > 0)
             .join(this.NewLine)
-        return sql
+
+        return merge ? { sql, params: parms } as ParamSql : sql
     }
 
     /**
@@ -485,7 +520,7 @@ export class SqlUtils {
      * @param fields 需要出现的字段
      * @returns 返回set部分内容
      */
-    static updateSet<T>(ctor: new () => T, item: T, fields: string[]) {
+    static updateSet<T>(ctor: new () => T, item: T, fields: string[], parms?: any[]) {
 
         let conlums = ""
         for (const field of fields) {
@@ -495,13 +530,17 @@ export class SqlUtils {
                 const conlum = SqlUtils.getFieldAliasBtCtor(ctor, field)
                 const value = item[field]
                 let valueStr = ""
-                if (value === undefined)
-                    valueStr = "null"
-                else if (typeof value === 'number')
-                    valueStr = `${value}`
-                else
-                    valueStr = `'${value}'`
-
+                if (parms) {
+                    valueStr = "?"
+                    parms.push(value ?? null)
+                } else {
+                    if (value === undefined)
+                        valueStr = "null"
+                    else if (typeof value === 'number')
+                        valueStr = `${value}`
+                    else
+                        valueStr = `'${value}'`
+                }
                 conlums += `${conlum} = ${valueStr}`
             }
         }

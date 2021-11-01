@@ -1,7 +1,7 @@
 import { Blog, User, Comment } from "./model";
 import { SqlUtils } from "../src/sql_utils";
 import { From as from } from "./mock_expr";
-import { ParmSql } from './../src/sql_expr_type';
+import { ParamSql } from './../src/sql_expr_type';
 
 
 
@@ -67,8 +67,8 @@ test('select fields', () => {
 
     expect(from(Blog).select(b => ({ b, author: "joe" })).toSql()).toEqual({
         sql: "select Id,UserId,Title,? as author from Blog",
-        parms: ["joe"]
-    });
+        params: ["joe"]
+    } as ParamSql);
 
     expect(from(User).select(u => u).toMergeSql()).toEqual("select user_id,name,Gender from users");
 
@@ -94,8 +94,8 @@ test('where', () => {
     expect(from(Blog).where(b => b.Id === 123).toSql()).toEqual({
         sql: ["select * from Blog",
             "where Id = ?"].join(SqlUtils.NewLine),
-        parms: [123]
-    });
+        params: [123]
+    } as ParamSql);
 
     expect(from(Blog).where(b => b.Title === "hello world!").toMergeSql())
         .toEqual(["select * from Blog",
@@ -103,8 +103,8 @@ test('where', () => {
     expect(from(Blog).where(b => b.Title === "hello world!").toSql()).toEqual({
         sql: ["select * from Blog",
             "where Title = ?"].join(SqlUtils.NewLine),
-        parms: ['hello world!']
-    });
+        params: ['hello world!']
+    } as ParamSql);
 
 
 });
@@ -138,7 +138,7 @@ test('insert', () => {
         .toEqual("insert into Blog (UserId,Title,Context) values (1,'Hello World!',null)");
 
     expect(SqlUtils.insert({ UserId: 1, Title: blog.Title } as Blog, true))
-        .toEqual({ sql: "insert into Blog (UserId,Title,Context) values (?,?,?)", parms: [1, 'Hello World!', null] } as ParmSql);
+        .toEqual({ sql: "insert into Blog (UserId,Title,Context) values (?,?,?)", params: [1, 'Hello World!', null] } as ParamSql);
 
 });
 
@@ -152,14 +152,34 @@ test("update", () => {
     expect(SqlUtils.updateAll(blog))
         .toEqual("update Blog set UserId = 1,Title = 'Hello World!',Context = null");
 
+
+    expect(SqlUtils.updateAll(blog, true))
+        .toEqual({ sql: "update Blog set UserId = ?,Title = ?,Context = ?", params: [1, 'Hello World!', null] } as ParamSql);
+
+
     expect(SqlUtils.update(blog, b => b.Id === 1))
         .toEqual(["update Blog set UserId = 1,Title = 'Hello World!',Context = null"
             , "where Id = 1"].join(SqlUtils.NewLine));
+
+    expect(SqlUtils.update(blog, b => b.Id === 1, true))
+        .toEqual({
+            sql: ["update Blog set UserId = ?,Title = ?,Context = ?"
+                , "where Id = ?"].join(SqlUtils.NewLine), params: [1, 'Hello World!', null, 1]
+        } as ParamSql);
 
     expect(SqlUtils.updateFields({ Title: "abc" } as Blog, b => b.Id === 1))
         .toEqual(["update Blog set Title = 'abc'"
             , "where Id = 1"].join(SqlUtils.NewLine));
 
+    expect(SqlUtils.updateFields({ Title: "abc" } as Blog, b => b.Id === 1, true))
+        .toEqual({
+            sql: ["update Blog set Title = ?"
+                , "where Id = ?"].join(SqlUtils.NewLine), params: ['abc', 1]
+        } as ParamSql);
+
     expect(SqlUtils.updateAllFields({ Title: "abc" } as Blog))
         .toEqual("update Blog set Title = 'abc'");
+
+    expect(SqlUtils.updateAllFields({ Title: "abc" } as Blog, true))
+        .toEqual({ sql: "update Blog set Title = ?", params: ['abc'] } as ParamSql);
 })

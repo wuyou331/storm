@@ -1,8 +1,8 @@
 import { Expression, ExpressionNode } from "tst-expression";
 
-export class ParmSql {
+export class ParamSql {
 	public sql: string
-	public parms: any[] = []
+	public params: any[] = []
 
 }
 export interface SqlExpr<T> {
@@ -73,7 +73,7 @@ export interface SqlExpr<T> {
 	/** 生成参数化的SQL语句 */
 	toMergeSql(): string
 	/** 生成SQL语句  */
-	toSql(): ParmSql
+	toSql(): ParamSql
 
 	queryList(): Promise<T[]>
 	queryList<TModel>(): Promise<TModel[]>
