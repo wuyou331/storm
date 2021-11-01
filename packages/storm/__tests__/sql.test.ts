@@ -134,8 +134,13 @@ test('insert', () => {
     expect(SqlUtils.insert(blog))
         .toEqual("insert into Blog (UserId,Title,Context) values (1,'Hello World!',null)");
 
+
+    expect(SqlUtils.insert(blog, true))
+        .toEqual({ sql: "insert into Blog (UserId,Title,Context) values (?,?,?)", params: [1, 'Hello World!', null] } as ParamSql);
+
     expect(SqlUtils.insert({ UserId: 1, Title: blog.Title } as Blog))
         .toEqual("insert into Blog (UserId,Title,Context) values (1,'Hello World!',null)");
+
 
     expect(SqlUtils.insert({ UserId: 1, Title: blog.Title } as Blog, true))
         .toEqual({ sql: "insert into Blog (UserId,Title,Context) values (?,?,?)", params: [1, 'Hello World!', null] } as ParamSql);
