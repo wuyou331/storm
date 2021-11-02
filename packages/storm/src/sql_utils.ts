@@ -302,18 +302,21 @@ export class SqlUtils {
     //#region isnert语句
     /** 生成insert SQL语句
      *  @example
-     *  ```typescript
      *  SqlUtils.insert(blog)
      *  or
      *  SqlUtils.insert({ UserId: 1, Title: blog.Title } as Blog)
-     *  ```
      */
     static insert<T extends object>(item: T | Expression<() => T>, merge?: boolean, lastIdSql?: string): string | ParamSql {
         return SqlUtils.insertExpr(item, merge, lastIdSql)
     }
 
-
-    static insertExpr<T extends object>(item: T , merge?: boolean, lastIdSql?: string): string | ParamSql {
+    /**
+     *  生成insert SQL语句
+     * @param item Expression<() => T>声明为any是为了避免编译器多次转换表达式
+     * @param merge 返回是否参数化的sql语句
+     * @param lastIdSql 执行完insert后，返回id的sql语句
+     */
+    static insertExpr<T extends object>(item: any, merge?: boolean, lastIdSql?: string): string | ParamSql {
         assertExpression(item)
         let ctor: new () => T
         let obj: T
@@ -398,30 +401,39 @@ export class SqlUtils {
      * @example
      * SqlUtils.updateAll(blog, b => b.Id === 1)
      */
-    static update<T extends object>(item: T | Expression<T>, where: Expression<(p: T) => boolean>, merge?: boolean): string | ParamSql {
-        const { ctor, obj } = this.getUpdateCtor(item)
+    static update<T extends object>(item: T, where: Expression<(p: T) => boolean>, merge?: boolean): string | ParamSql {
+        const ctor = this.getCtorByNewObject(item)
         if (merge) {
-            return this.updateSql(ctor, obj, Meta.getMembers(ctor), where, merge)
+            return this.updateSql(ctor, item, Meta.getMembers(ctor), where, merge)
         } else {
-            return this.updateSql(ctor, obj, Meta.getMembers(ctor), where)
+            return this.updateSql(ctor, item, Meta.getMembers(ctor), where)
         }
     }
 
-    return
+
     /**
      * 生成update语句，会权标更新所有字段
      * @returns 返回完整的update语句
      * @example
      * SqlUtils.updateAll(blog)
      */
-    static updateAll<T extends object>(item: T | Expression<T>, merge?: boolean): string | ParamSql {
-        const { ctor, obj } = this.getUpdateCtor(item)
+    static updateAll<T extends object>(item: T, merge?: boolean): string | ParamSql {
+        const ctor = this.getCtorByNewObject(item)
         if (merge) {
-            return this.updateSql(ctor, obj, Meta.getMembers(ctor), null, merge)
+            return this.updateSql(ctor, item, Meta.getMembers(ctor), null, merge)
         } else {
-            return this.updateSql(ctor, obj, Meta.getMembers(ctor))
+            return this.updateSql(ctor, item, Meta.getMembers(ctor))
         }
     }
+
+    /** 获取对象的构造方法，只能是new出来的对象 */
+    private static getCtorByNewObject<T extends object>(item: T): new () => T {
+        const ctor = item.constructor as new () => T
+        if (ctor.name === "Object") throw new Error("只支持通过构造函数new出来的对象")
+        return ctor;
+    }
+
+
     /**
      * 生成update语句，只更新部分字段
      * @param fields 对象字段
@@ -430,9 +442,13 @@ export class SqlUtils {
      * SqlUtils.updateFields({ Title: "abc" } as Blog, b => b.Id === 1)
      */
     static updateFields<T extends object>(fields: Expression<T>, where: Expression<(p: T) => boolean>, merge?: boolean) {
+        return SqlUtils.updateFieldsExpr(fields, where, merge)
+    }
+
+    static updateFieldsExpr<T extends object>(fields: any, where: Expression<(p: T) => boolean>, merge?: boolean) {
         assertExpression(fields)
         assertAsExpression(fields.expression)
-        const { ctor, obj } = this.getUpdateCtor(fields)
+        const { ctor, obj } = this.getCtorByExpr(fields)
         if (merge) {
             return this.updateSql(ctor, obj, Object.keys(obj), where, merge)
         } else {
@@ -446,10 +462,14 @@ export class SqlUtils {
      * @example
      * SqlUtils.updateFields({ Title: "abc" } as Blog)
      */
-    static updateAllFields<T extends object>(fields: Expression<T>, merge?: boolean) {
+    static updateFieldsForAll<T extends object>(fields: Expression<T>, merge?: boolean) {
+        return SqlUtils.updateFieldsForAllExpr(fields, merge)
+    }
+
+    static updateFieldsForAllExpr(fields: any, merge?: boolean) {
         assertExpression(fields)
         assertAsExpression(fields.expression)
-        const { ctor, obj } = this.getUpdateCtor(fields)
+        const { ctor, obj } = this.getCtorByExpr(fields)
         if (merge) {
             return this.updateSql(ctor, obj, Object.keys(obj), null, merge)
         } else {
@@ -458,12 +478,12 @@ export class SqlUtils {
 
     }
 
-    /** update表达式中获取构造函数和对象
+    /** 从表达式中获取构造函数和对象
      * @param item any类型是因为如果用表达式树类型会被编译器再次转义
      * @example
-     * SqlUtils.updateAllFields({ Title: "abc" } as Blog)
+     * SqlUtils.updateFieldsForAll({ Title: "abc" } as Blog)
      */
-    private static getUpdateCtor(item: any) {
+    private static getCtorByExpr(item: any) {
         assertExpression(item)
         let ctor: new () => any
         let obj: any
@@ -479,6 +499,7 @@ export class SqlUtils {
         }
         return { ctor, obj }
     }
+
 
     /** 生成update SQL语句的方法
      * @param where any类型是因为如果用表达式树类型会被编译器再次转义

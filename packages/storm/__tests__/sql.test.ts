@@ -182,9 +182,9 @@ test("update", () => {
                 , "where Id = ?"].join(SqlUtils.NewLine), params: ['abc', 1]
         } as ParamSql);
 
-    expect(SqlUtils.updateAllFields({ Title: "abc" } as Blog))
+    expect(SqlUtils.updateFieldsForAll({ Title: "abc" } as Blog))
         .toEqual("update Blog set Title = 'abc'");
 
-    expect(SqlUtils.updateAllFields({ Title: "abc" } as Blog, true))
+    expect(SqlUtils.updateFieldsForAll({ Title: "abc" } as Blog, true))
         .toEqual({ sql: "update Blog set Title = ?", params: ['abc'] } as ParamSql);
 })
