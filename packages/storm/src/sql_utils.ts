@@ -573,4 +573,42 @@ export class SqlUtils {
 
 
     //#endregion
+
+    //#region delete语句
+
+    static delete<T extends object>(ctor: new () => T, where: Expression<(p: T) => boolean>, merge?: boolean): string | ParamSql {
+
+        const params: [] = []
+        let whereStr = ""
+        if (where) {
+            assertExpression(where)
+            const context = new SqlExprContext(_SQLCHAR)
+            const joinTable = new SqlTableJoin(ctor)
+            context.joins.push(joinTable)
+            context.whereConditions.push(where)
+            if (merge) {
+                whereStr = SqlUtils.where(context, params)
+            } else {
+                whereStr = SqlUtils.where(context)
+            }
+
+        }
+
+        if (merge) {
+            return {
+                sql: [`delete from ${SqlUtils.tableNameByCtor(ctor)}`, whereStr]
+                    .filter(s => s.length > 0)
+                    .join(SqlUtils.NewLine), params
+            } as ParamSql
+
+        } else {
+
+            return [`delete from ${SqlUtils.tableNameByCtor(ctor)}`, whereStr]
+                .filter(s => s.length > 0)
+                .join(SqlUtils.NewLine)
+
+        }
+    }
+
+    //#endregion
 }

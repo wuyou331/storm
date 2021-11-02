@@ -51,8 +51,8 @@ export abstract class DefaultSqlExpr<T> implements SqlExpr<T>{
 
 	// 方法签名需注意ctor2参数在接口中是必选的，但在实际的方法中是可选的
 	// 因为TS语法限制，获取泛型对象需把构造函数传参进来，所以Join方法需要用圆括号传泛型参数而 Where用尖括号传泛型参数
-	join<T1, T2>(ctor1: new () => T1, ctor2?: new () => T2): SqlJoin2<T, T1, T2>
 	join<T1>(ctor2: new () => T1): SqlJoin2<T, T, T1>
+	join<T1, T2>(ctor1: new () => T1, ctor2?: new () => T2): SqlJoin2<T, T1, T2>
 	join<T1, T2, T3>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3): SqlJoin3<T, T1, T2, T3>
 	join<T1, T2, T3, T4>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4): SqlJoin4<T, T1, T2, T3, T4>
 	join<T1, T2, T3, T4, T5>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4, ctor5?: new () => T5): SqlJoin5<T, T1, T2, T3, T4, T5>

@@ -188,3 +188,11 @@ test("update", () => {
     expect(SqlUtils.updateFieldsForAll({ Title: "abc" } as Blog, true))
         .toEqual({ sql: "update Blog set Title = ?", params: ['abc'] } as ParamSql);
 })
+
+test("delete", () => {
+    expect(SqlUtils.delete(User, b => b.Id === 1))
+    .toEqual(["delete from users", "where user_id = 1"].join(SqlUtils.NewLine))
+
+    expect(SqlUtils.delete(User, b => b.Id === 1,true))
+    .toEqual({sql:["delete from users", "where user_id = ?"].join(SqlUtils.NewLine),params:[1]} as ParamSql)
+})
