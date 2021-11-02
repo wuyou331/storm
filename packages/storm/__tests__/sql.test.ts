@@ -2,7 +2,7 @@ import { Blog, User, Comment } from "./model";
 import { SqlUtils } from "../src/sql_utils";
 import { From as from } from "./mock_expr";
 import { ParamSql } from './../src/sql_expr_type';
-
+import { Sql } from './../src/sql';
 
 
 test('from', () => {
@@ -109,6 +109,18 @@ test('where', () => {
 
 });
 
+test('where sql in', () => {
+    const subQuery = from(User).where(u => u.Id === 100)
+    expect(from(Blog).where(b =>  Sql.in(b.UserId, subQuery)).toMergeSql())
+        .toEqual(["select * from Blog"
+            , "where Id = 123"].join(SqlUtils.NewLine));
+
+
+
+});
+
+
+
 test('skip & take', () => {
 
     expect(from(Blog).skip(1).toMergeSql())
@@ -191,8 +203,8 @@ test("update", () => {
 
 test("delete", () => {
     expect(SqlUtils.delete(User, b => b.Id === 1))
-    .toEqual(["delete from users", "where user_id = 1"].join(SqlUtils.NewLine))
+        .toEqual(["delete from users", "where user_id = 1"].join(SqlUtils.NewLine))
 
-    expect(SqlUtils.delete(User, b => b.Id === 1,true))
-    .toEqual({sql:["delete from users", "where user_id = ?"].join(SqlUtils.NewLine),params:[1]} as ParamSql)
+    expect(SqlUtils.delete(User, b => b.Id === 1, true))
+        .toEqual({ sql: ["delete from users", "where user_id = ?"].join(SqlUtils.NewLine), params: [1] } as ParamSql)
 })

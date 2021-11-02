@@ -1,10 +1,11 @@
-import { assertArrowFunctionExpression, assertExpression, assertIdentifier, assertParameterExpression, assertPropertyAccessExpression, Expression, ExpressionKind, ExpressionNode, IdentifierExpressionNode, isBinaryExpression, isIdentifier, isNumericLiteral, isObjectLiteralExpression, isParenthesizedExpression, isPropertyAccessExpression, isPropertyAssignmentExpression, isShorthandPropertyAssignmentExpression, isStringLiteral } from "tst-expression";
+import { assertArrowFunctionExpression, assertExpression, assertIdentifier, assertParameterExpression, assertPropertyAccessExpression, Expression, ExpressionKind, ExpressionNode, IdentifierExpressionNode, isBinaryExpression, isCallExpression, isIdentifier, isNumericLiteral, isObjectLiteralExpression, isParenthesizedExpression, isPropertyAccessExpression, isPropertyAssignmentExpression, isShorthandPropertyAssignmentExpression, isStringLiteral } from "tst-expression";
 import { isFunction, isNumber } from "util";
 import { Meta } from "./meta";
 import { SqlExprContext, SqlTableJoin } from "./sql_expr";
-import { ParamSql } from "./sql_expr_type";
+import { ParamSql, SqlExpr } from "./sql_expr_type";
 import { updateIgnore, _SQLCHAR } from 'storm';
 import { AsExpression, isAsExpression, assertAsExpression } from './tsexpr_type';
+import { SqlCallCheck } from "./sql";
 
 export class SqlUtils {
 
@@ -76,7 +77,15 @@ export class SqlUtils {
                 return `${SqlUtils.convertVal(context, topExpr, partExpr.left, parms)} ${SqlUtils.operatorMap[partExpr.operatorToken.kind]} ${SqlUtils.convertVal(context, topExpr, partExpr.right, parms)}`
         else if (partExpr.kind === ExpressionKind.TrueKeyword) return "1==1";
         else if (partExpr.kind === ExpressionKind.FalseKeyword) return "1<>1";
+        else if (isCallExpression(partExpr)) {
+            if (SqlCallCheck.in(partExpr)) {
+                return `${this.convertVal(context, topExpr, partExpr.arguments[0])} in (${(this.convertVal(context, topExpr, partExpr.arguments[1]) as SqlExpr<any>).toMergeSql()})`
+            }
+            return "abc"
+        }
     }
+
+
 
     /** 转换表达式的值 */
     static convertVal(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode, parms?: any[]) {
