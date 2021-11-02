@@ -1,11 +1,12 @@
-import { assertArrowFunctionExpression, assertExpression, assertIdentifier, assertParameterExpression, assertPropertyAccessExpression, Expression, ExpressionKind, ExpressionNode, IdentifierExpressionNode, isBinaryExpression, isCallExpression, isIdentifier, isNumericLiteral, isObjectLiteralExpression, isParenthesizedExpression, isPropertyAccessExpression, isPropertyAssignmentExpression, isShorthandPropertyAssignmentExpression, isStringLiteral } from "tst-expression";
+import { assertArrowFunctionExpression, assertExpression, assertIdentifier, assertParameterExpression, assertPropertyAccessExpression, Expression, ExpressionKind, ExpressionNode, IdentifierExpressionNode, isBinaryExpression, isCallExpression, isIdentifier, isNumericLiteral, isObjectLiteralExpression, isParameterExpression, isParenthesizedExpression, isPropertyAccessExpression, isPropertyAssignmentExpression, isShorthandPropertyAssignmentExpression, isStringLiteral } from "tst-expression";
 import { isFunction, isNumber } from "util";
 import { Meta } from "./meta";
 import { SqlExprContext, SqlTableJoin } from "./sql_expr";
-import { ParamSql, SqlExpr } from "./sql_expr_type";
+import { isSqlExp, ParamSql, SqlExpr } from "./sql_expr_type";
 import { updateIgnore, _SQLCHAR } from 'storm';
 import { AsExpression, isAsExpression, assertAsExpression } from './tsexpr_type';
 import { SqlCallCheck } from "./sql";
+import { DefaultSqlExpr } from 'storm';
 
 export class SqlUtils {
 
@@ -79,7 +80,7 @@ export class SqlUtils {
         else if (partExpr.kind === ExpressionKind.FalseKeyword) return "1<>1";
         else if (isCallExpression(partExpr)) {
             if (SqlCallCheck.in(partExpr)) {
-                return `${this.convertVal(context, topExpr, partExpr.arguments[0])} in (${(this.convertVal(context, topExpr, partExpr.arguments[1]) as SqlExpr<any>).toMergeSql()})`
+                return `${this.convertVal(context, topExpr, partExpr.arguments[0])} in (${this.convertVal(context, topExpr, partExpr.arguments[1])})`
             }
             return "abc"
         }
@@ -106,12 +107,19 @@ export class SqlUtils {
             }
         } else if (isIdentifier(expr)) {
             // lambda中直接访问变量
-            if (parms === undefined)
-                return topExpr.context[expr.escapedText]
-            else {
-                parms.push(topExpr.context[expr.escapedText])
-                return "?"
+            const val = topExpr.context[expr.escapedText]
+            if (isSqlExp(val)) {
+                return val.toMergeSql()
+            } else {
+                if (parms === undefined)
+                    return topExpr.context[expr.escapedText]
+                else {
+                    parms.push(topExpr.context[expr.escapedText])
+                    return "?"
+                }
             }
+
+
         }
         else if (isNumericLiteral(expr)) {
             if (parms === undefined)
@@ -269,6 +277,9 @@ export class SqlUtils {
             } else if (isIdentifier(expr)) {
                 // eg: Select(i=>i)
                 return SqlUtils.selectFieldByIdentifier(context, expr).trim()
+            } else if (isPropertyAccessExpression(expr)) {
+                // eg: Select(i=>i)
+                return SqlUtils.convertVal(context,select,expr)
             } else {
                 throw Error("Select方法中有不能识别的语法")
             }

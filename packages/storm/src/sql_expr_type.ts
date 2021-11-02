@@ -82,6 +82,9 @@ export interface SqlExpr<T> {
 	querySingle<TModel>(): Promise<TModel>
 }
 
+export function isSqlExp(expr :any):expr is SqlExpr<any>{
+return	'toSql' in expr
+}
 
 export interface SqlJoin2<T, T1, T2> {
 	on(on: Expression<(tab1: T1, tab2: T2) => boolean>): SqlExpr<T>

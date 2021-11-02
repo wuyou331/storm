@@ -59,6 +59,8 @@ test('join', () => {
 test('select fields', () => {
     expect(from(Blog).select().toMergeSql()).toEqual("select * from Blog");
 
+    expect(from(Blog).select(b => b.Title).toMergeSql()).toEqual("select Title from Blog");
+
     expect(from(Blog).select("*").toMergeSql()).toEqual("select * from Blog");
 
     expect(from(Blog).select(b => b).toMergeSql()).toEqual("select Id,UserId,Title from Blog");
@@ -110,8 +112,8 @@ test('where', () => {
 });
 
 test('where sql in', () => {
-    const subQuery = from(User).where(u => u.Id === 100)
-    expect(from(Blog).where(b =>  Sql.in(b.UserId, subQuery)).toMergeSql())
+    const subQuery = from(User).where(u => u.Name === "wuyou").select(u => u.Id)
+    expect(from(Blog).where(b => Sql.in(b.UserId, subQuery)).toMergeSql())
         .toEqual(["select * from Blog"
             , "where Id = 123"].join(SqlUtils.NewLine));
 
