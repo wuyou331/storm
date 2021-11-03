@@ -11,10 +11,17 @@ export class SqliteDatabase implements storm.Database {
         this.db = new sqlite3.Database(connStr);
 
     }
-
-
-
     public from = <T extends object>(ctor: new () => T, alias?: string): storm.SqlExpr<T> => new SqliteSqlExpr<T>(ctor, this, alias)
+
+    delete<T extends object>(ctor: new () => T, where: Expression<(t: T) => boolean>): Promise<number> {
+        const paramSql = storm.SqlUtils.deleteExpr(ctor, where, true) as storm.ParamSql
+        return this.excuteSqlReturnChanges(paramSql)
+    }
+    
+    deleteAll<T extends object>(ctor: new () => T): Promise<number> {
+        const paramSql = storm.SqlUtils.deleteExpr(ctor, undefined, true) as storm.ParamSql
+        return this.excuteSqlReturnChanges(paramSql)
+    }
 
     update<T extends object>(item: T, where: Expression<(p: T) => boolean>): Promise<number> {
         const paramSql = storm.SqlUtils.update(item, where, true) as storm.ParamSql

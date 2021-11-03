@@ -1,3 +1,4 @@
+import exp = require("constants");
 import { Expression, ExpressionNode } from "tst-expression";
 
 export class ParamSql {
@@ -83,7 +84,8 @@ export interface SqlExpr<T> {
 }
 
 export function isSqlExp(expr: any): expr is SqlExpr<any> {
-	return ['toSql', 'toMergeSql'].every(m => m in expr)
+
+	return 	typeof(expr) === "object" && ['toSql', 'toMergeSql'].every(m => m in expr)
 }
 
 export interface SqlJoin2<T, T1, T2> {

@@ -18,7 +18,7 @@ export class SqlUtils {
         let whereStr = ""
         context.joins.forEach((join, i) => {
             if (i > 0) {
-                whereStr += `${join.JoinMethod.toLowerCase()} join ${SqlUtils.tableName(join)} on ${SqlUtils.convertCondition(context, join.ON)}`.trim()
+                whereStr += `${join.JoinMethod.toLowerCase()} join ${SqlUtils.tableName(join)} on ${SqlUtils.condition(context, join.ON)}`.trim()
                 if (i < context.joins.length - 1)
                     whereStr += SqlUtils.NewLine
             }
@@ -44,7 +44,7 @@ export class SqlUtils {
         if (context.whereConditions.length === 0) return ""
         let whereStr = "where "
         context.whereConditions.forEach((expr, i) => {
-            whereStr += SqlUtils.convertCondition(context, expr, undefined, parms)
+            whereStr += SqlUtils.condition(context, expr, undefined, parms)
             if (i < context.whereConditions.length - 1)
                 whereStr += " and "
         });
@@ -65,15 +65,15 @@ export class SqlUtils {
         [ExpressionKind.LessThanToken]: "<",
     }
 
-    /** 转换条件表达式 Where 或者 Join */
-    static convertCondition(context: SqlExprContext, topExpr: Expression<any>, partExpr?: ExpressionNode, parms?: any[]) {
+    /** 转换条件表达式 Where 或者 Join on */
+    static condition(context: SqlExprContext, topExpr: Expression<any>, partExpr?: ExpressionNode, parms?: any[]) {
         assertExpression(topExpr)
         assertArrowFunctionExpression(topExpr.expression)
         if (partExpr == null) partExpr = topExpr.expression.body
 
         if (isBinaryExpression(partExpr))
             if (partExpr.operatorToken.kind === ExpressionKind.BarBarToken || partExpr.operatorToken.kind === ExpressionKind.AmpersandAmpersandToken)
-                return `(${SqlUtils.convertCondition(context, topExpr, partExpr.left, parms)} ${SqlUtils.operatorMap[partExpr.operatorToken.kind]} ${this.convertCondition(context, topExpr, partExpr.right, parms)})`
+                return `(${SqlUtils.condition(context, topExpr, partExpr.left, parms)} ${SqlUtils.operatorMap[partExpr.operatorToken.kind]} ${this.condition(context, topExpr, partExpr.right, parms)})`
             else
                 return `${SqlUtils.convertVal(context, topExpr, partExpr.left, parms)} ${SqlUtils.operatorMap[partExpr.operatorToken.kind]} ${SqlUtils.convertVal(context, topExpr, partExpr.right, parms)}`
         else if (partExpr.kind === ExpressionKind.TrueKeyword) return "1==1";
@@ -96,7 +96,7 @@ export class SqlUtils {
     static convertVal(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode, parms?: any[]): string | ParamSql {
 
         if (isBinaryExpression(expr))
-            SqlUtils.convertCondition(context, topExpr, expr)
+            SqlUtils.condition(context, topExpr, expr)
         else if (isPropertyAccessExpression(expr)) {
             // 属性访问有两种， 1、调用lambda参数   2、调用变量
             assertExpression(topExpr)
@@ -104,13 +104,13 @@ export class SqlUtils {
             if (isIdentifier(expr.expression) &&
                 topExpr.expression.parameters.some(p => p.name.escapedText === (expr.expression as IdentifierExpressionNode).escapedText)) {
                 // 调用lambda参数
-                return SqlUtils.convertPropertyAccessByArgs(context, topExpr, expr)
+                return SqlUtils.propertyAccessByArgs(context, topExpr, expr)
             } else {
                 // 调用变量
                 return SqlUtils.propertyAccessByVar(context, topExpr, expr)
             }
         } else if (isIdentifier(expr)) {
-            // lambda中直接访问变量            
+            // lambda中直接访问变量
             const val = topExpr.context[expr.escapedText]
             if (isSqlExp(val)) {
                 if (parms === undefined) {
@@ -143,7 +143,6 @@ export class SqlUtils {
                 }
             }
 
-
         } else if (isArrayLiteralExpression(expr)) {
             let arrStr = ""
             for (const v of expr.elements) {
@@ -173,7 +172,7 @@ export class SqlUtils {
     }
 
     /** 转换lambda参数的属性访问 */
-    private static convertPropertyAccessByArgs(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode) {
+    static propertyAccessByArgs(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode) {
 
         assertPropertyAccessExpression(expr)
         assertIdentifier(expr.expression)
@@ -187,7 +186,7 @@ export class SqlUtils {
     }
 
     /** 获取类属性别名 */
-    private static getFieldAlias(context: SqlExprContext, classAlias: string, propertyName: string) {
+    static getFieldAlias(context: SqlExprContext, classAlias: string, propertyName: string) {
 
 
         let ctor = context.joins.length === 1 ? context.joins[0].Ctor : undefined
@@ -201,20 +200,20 @@ export class SqlUtils {
     }
 
     /** 获取类属性别名 */
-    private static getFieldAliasBtCtor(ctor: new () => any, propertyName: string) {
+    static getFieldAliasBtCtor(ctor: new () => any, propertyName: string) {
         const meta = Meta.getMeta(ctor, propertyName)
         return meta?.Alias ?? propertyName
     }
 
     /** 判断列是否在Select中被忽略 */
-    private static isSelectIgnore(ctor: new () => any, classAlias: string, propertyName: string): boolean {
+    static isSelectIgnore(ctor: new () => any, classAlias: string, propertyName: string): boolean {
         const meta = Meta.getMeta(ctor, propertyName)
         return meta.SelectIgnore
     }
 
 
     /** 转换调用变量的属性访问,支持多级变量访问支持 */
-    private static propertyAccessByVar(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode) {
+    static propertyAccessByVar(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode) {
 
         assertPropertyAccessExpression(expr)
         //
@@ -318,7 +317,7 @@ export class SqlUtils {
 
     }
     /** select中列出某个对象所有字段 eg: Select(i=>{i}) */
-    private static selectFieldByIdentifier(context: SqlExprContext, expr: IdentifierExpressionNode) {
+    static selectFieldByIdentifier(context: SqlExprContext, expr: IdentifierExpressionNode) {
         const select = context.select
         const classAlias = expr.escapedText
         if (select.expression.parameters.some(p => p.name.escapedText === classAlias)) {
@@ -478,7 +477,7 @@ export class SqlUtils {
     }
 
     /** 获取对象的构造方法，只能是new出来的对象 */
-    private static getCtorByNewObject<T extends object>(item: T): new () => T {
+    static getCtorByNewObject<T extends object>(item: T): new () => T {
         const ctor = item.constructor as new () => T
         if (ctor.name === "Object") throw new Error("只支持通过构造函数new出来的对象")
         return ctor;
@@ -534,7 +533,7 @@ export class SqlUtils {
      * @example
      * SqlUtils.updateFieldsForAll({ Title: "abc" } as Blog)
      */
-    private static getCtorByExpr(item: any) {
+    static getCtorByExpr(item: any) {
         assertExpression(item)
         let ctor: new () => any
         let obj: any
@@ -555,7 +554,7 @@ export class SqlUtils {
     /** 生成update SQL语句的方法
      * @param where any类型是因为如果用表达式树类型会被编译器再次转义
      */
-    private static updateSql<T extends object>(ctor: new () => T, obj: T, members: string[], where?: any, merge?: boolean): string | ParamSql {
+    static updateSql<T extends object>(ctor: new () => T, obj: T, members: string[], where?: any, merge?: boolean): string | ParamSql {
 
         let whereStr = ""
         let sets = ""
@@ -629,6 +628,10 @@ export class SqlUtils {
 
     static delete<T extends object>(ctor: new () => T, where: Expression<(p: T) => boolean>, merge?: boolean): string | ParamSql {
 
+        return SqlUtils.deleteExpr(ctor, where, merge)
+    }
+
+    static deleteExpr<T extends object>(ctor: new () => T, where: any, merge?: boolean): string | ParamSql {
         const params: [] = []
         let whereStr = ""
         if (where) {

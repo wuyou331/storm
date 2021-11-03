@@ -143,16 +143,16 @@ test('where sql in', () => {
         } as ParamSql);
 
 
-    expect(from(Blog).where(b => Sql.in(b.UserId, [1, 2, 3, 4, 5])).toMergeSql())
+    expect(from(Blog).where(b => Sql.in(b.UserId, [1, 2, 3, 4, 'a'])).toMergeSql())
         .toEqual(["select * from Blog",
-            "where UserId in (1,2,3,4,5)"]
+            "where UserId in (1,2,3,4,'a')"]
             .join(SqlUtils.NewLine));
 
 
-    let arr = [1, 2, 3, 4, 5]
+    let arr = [1, 2, 3, 4, 'b']
     expect(from(Blog).where(b => Sql.in(b.UserId, arr)).toMergeSql())
         .toEqual(["select * from Blog",
-            "where UserId in (1,2,3,4,5)"]
+            "where UserId in (1,2,3,4,'b')"]
             .join(SqlUtils.NewLine));
 
 });

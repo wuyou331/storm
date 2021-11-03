@@ -46,4 +46,8 @@ export interface Database {
      */
     updateFieldsForAll<T extends object>(fields: Expression<T>): Promise<number>
 
+
+    delete<T extends object>(ctro:new()=>T, where: Expression<(t: T) => boolean>): Promise<number>
+    deleteAll<T extends object>(ctor: new () => T): Promise<number>
+
 }

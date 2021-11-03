@@ -4,6 +4,6 @@
         "tslint:recommended"
     ],
     "jsRules": {},
-    "rules": {"max-classes-per-file":false,"curly": true},
+    "rules": {"max-classes-per-file":false},
     "rulesDirectory": []
 }

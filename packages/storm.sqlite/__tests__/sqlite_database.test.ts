@@ -36,8 +36,14 @@ test("update", async () => {
     const blog = new Blog()
     blog.name = "Hello World!"
     await expect(db.update(blog, b => b.id === 1)).resolves.toBeGreaterThan(0)
-    await expect(()=>db.update({ name: "Hello World" } as Blog, b => b.id === 1)).toThrowError("只支持通过构造函数new出来的对象")
+    await expect(() => db.update({ name: "Hello World" } as Blog, b => b.id === 1)).toThrowError("只支持通过构造函数new出来的对象")
     await expect(db.updateAll(blog)).resolves.toBeGreaterThan(0)
     await expect(db.updateFields({ name: "Hello World" } as Blog, b => b.id === 1)).resolves.toBeGreaterThan(0)
     await expect(db.updateFieldsForAll({ name: "Hello World" } as Blog)).resolves.toBeGreaterThan(0)
+})
+
+test("delete", async () => {
+    const id = await db.insert({ name: "Hello World!" } as Blog)
+    await expect(db.delete(Blog, b => b.id === id)).resolves.toBeGreaterThan(0)
+    await expect(db.deleteAll(Blog)).resolves.toBeGreaterThan(0)
 })
