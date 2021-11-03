@@ -4,7 +4,7 @@ Storm is a Simple , Typed ORM for TypeScript.
 Storm是一个简单，强类型基于TypeScript语言的ORM框架，它非常简单易学，没有侵入性的POCO实体，没有复杂的实体关系映射，且提供一套强类型的类SQL查询语法，
 编写逻辑和结构基本和SQL语句一致，让你在使用SQL的简单直观开发体验的同时亦可享受强类型带来的好处。
 
-![demo](https://raw.githubusercontent.com/wuyou331/storm/main/demo.gif)
+![demo](https://raw.githubusercontent.com/eric johnson331/storm/main/demo.gif)
 
 ## Examples
 
@@ -22,18 +22,18 @@ db.from(Blog).Where(b=>b.Title == "Hello World!").Select(b=>{id:b.Id,title:b.Tit
 //表关联自定义列
 db.from(Blog)
 .Join(User).ON((b,u)=>b.Creator==u.Id)
-.Where<User>(u=>u.Name == "wuyou")
+.Where<User>(u=>u.Name == "eric johnson")
 .Select<Blog,User>((b,u)=>{b,Author:"Joe"})
 //select b.Id,b.Title,'Joe' as Author from Blog b
 //join User as u on b.Creator = u.Id
-//where u.Name = 'wuyou' 
+//where u.Name = 'eric johnson' 
 
 //子查询
-const subQuery = from(User).where(u => u.Name === "wuyou").select(u => u.Id)
+const subQuery = from(User).where(u => u.Name === "eric johnson").select(u => u.Id)
 db.from(Blog).where(b => Sql.in(b.UserId, subQuery)
 //select * from Blog",
 //where UserId in (select user_id from users",
-//                 where name = 'wuyou')
+//                 where name = 'eric johnson')
 ```
 #### Insert
 ```typescript
