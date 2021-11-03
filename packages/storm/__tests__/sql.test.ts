@@ -149,7 +149,7 @@ test('where sql in', () => {
             .join(SqlUtils.NewLine));
 
 
-    let arr = [1, 2, 3, 4, 'b']
+    const arr = [1, 2, 3, 4, 'b']
     expect(from(Blog).where(b => Sql.in(b.UserId, arr)).toMergeSql())
         .toEqual(["select * from Blog",
             "where UserId in (1,2,3,4,'b')"]

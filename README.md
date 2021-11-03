@@ -8,7 +8,7 @@ Storm是一个简单，强类型基于TypeScript语言的ORM框架，它非常�
 
 ## Examples
 
-#### 简单查询
+#### Select
 ```typescript
 db.from(Blog).Where(b=>b.Title == "Hello World!") 
 //select * from Blog where Title = 'Hello World' 
@@ -57,7 +57,10 @@ db.updateFields({ Title: "abc" } as Blog, b => b.Id === 1)
 #### Delete
 ```typescript
 //条件删除
-db.delete(User, b => b.Id === 1)
+db.delete(Blog, b => b.Id === 1)
 //delete from Blog where Id = 1
 
+//全表删除
+db.deleteAll(Blog)
+//delete from Blog
 ```
