@@ -221,8 +221,10 @@ export abstract class DefaultSqlExpr<T> implements SqlExpr<T>{
 			.join(SqlUtils.NewLine).trim()
 	}
 
-	toSql(): ParamSql {
+	toSql(parms?: any[]): ParamSql {
 		const result = new ParamSql()
+		if (parms !== undefined)
+			result.params = parms
 		result.sql = [`select ${SqlUtils.select(this.context, result.params)} from ${SqlUtils.tableName(this.context.joins[0])}`,
 		SqlUtils.join(this.context),
 		SqlUtils.where(this.context, result.params),

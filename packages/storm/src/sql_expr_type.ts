@@ -65,15 +65,15 @@ export interface SqlExpr<T> {
 	select<T1, T2, T3, T4, T5, T6, TReturn>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => TReturn> | string): SqlExpr<TReturn>
 
 	/** 跳过数量 */
-	skip(n:number): SqlExpr<T>
+	skip(n: number): SqlExpr<T>
 
 	/** 获取数量 */
-	take(n:number): SqlExpr<T>
+	take(n: number): SqlExpr<T>
 
 	/** 生成参数化的SQL语句 */
 	toMergeSql(): string
 	/** 生成SQL语句  */
-	toSql(): ParamSql
+	toSql(parms?: any[]): ParamSql
 
 	queryList(): Promise<T[]>
 	queryList<TModel>(): Promise<TModel[]>
@@ -82,8 +82,8 @@ export interface SqlExpr<T> {
 	querySingle<TModel>(): Promise<TModel>
 }
 
-export function isSqlExp(expr :any):expr is SqlExpr<any>{
-return	'toSql' in expr
+export function isSqlExp(expr: any): expr is SqlExpr<any> {
+	return ['toSql', 'toMergeSql'].every(m => m in expr)
 }
 
 export interface SqlJoin2<T, T1, T2> {

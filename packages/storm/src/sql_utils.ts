@@ -44,7 +44,7 @@ export class SqlUtils {
         if (context.whereConditions.length === 0) return ""
         let whereStr = "where "
         context.whereConditions.forEach((expr, i) => {
-            whereStr += SqlUtils.convertCondition(context, expr, undefined, parms = parms)
+            whereStr += SqlUtils.convertCondition(context, expr, undefined, parms)
             if (i < context.whereConditions.length - 1)
                 whereStr += " and "
         });
@@ -80,7 +80,11 @@ export class SqlUtils {
         else if (partExpr.kind === ExpressionKind.FalseKeyword) return "1<>1";
         else if (isCallExpression(partExpr)) {
             if (SqlCallCheck.in(partExpr)) {
-                return `${this.convertVal(context, topExpr, partExpr.arguments[0])} in (${this.convertVal(context, topExpr, partExpr.arguments[1])})`
+                let left = this.convertVal(context, topExpr, partExpr.arguments[0], parms)
+                let right = this.convertVal(context, topExpr, partExpr.arguments[1], parms)
+                left = (left instanceof ParamSql) ? left.sql : left
+                right = (right instanceof ParamSql) ? right.sql : right
+                return `${left} in (${right})`
             }
             return "abc"
         }
@@ -89,7 +93,7 @@ export class SqlUtils {
 
 
     /** 转换表达式的值 */
-    static convertVal(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode, parms?: any[]) {
+    static convertVal(context: SqlExprContext, topExpr: Expression<any>, expr: ExpressionNode, parms?: any[]): string | ParamSql {
 
         if (isBinaryExpression(expr))
             SqlUtils.convertCondition(context, topExpr, expr)
@@ -109,7 +113,12 @@ export class SqlUtils {
             // lambda中直接访问变量
             const val = topExpr.context[expr.escapedText]
             if (isSqlExp(val)) {
-                return val.toMergeSql()
+                if (parms === undefined) {
+                    return val.toMergeSql()
+                } else {
+
+                    return val.toSql(parms)
+                }
             } else {
                 if (parms === undefined)
                     return topExpr.context[expr.escapedText]
@@ -279,7 +288,7 @@ export class SqlUtils {
                 return SqlUtils.selectFieldByIdentifier(context, expr).trim()
             } else if (isPropertyAccessExpression(expr)) {
                 // eg: Select(i=>i)
-                return SqlUtils.convertVal(context,select,expr)
+                return SqlUtils.convertVal(context, select, expr)
             } else {
                 throw Error("Select方法中有不能识别的语法")
             }

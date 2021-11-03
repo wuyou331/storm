@@ -114,11 +114,27 @@ test('where', () => {
 test('where sql in', () => {
     const subQuery = from(User).where(u => u.Name === "wuyou").select(u => u.Id)
     expect(from(Blog).where(b => Sql.in(b.UserId, subQuery)).toMergeSql())
-        .toEqual(["select * from Blog"
-            , "where Id = 123"].join(SqlUtils.NewLine));
+        .toEqual(["select * from Blog",
+            "where UserId in (select user_id from users",
+            "where name = 'wuyou')"]
+            .join(SqlUtils.NewLine));
+
+    expect(from(Blog).where(b => Sql.in(b.UserId, subQuery)).toSql())
+        .toEqual({
+            sql: ["select * from Blog",
+                "where UserId in (select user_id from users",
+                "where name = ?)"]
+                .join(SqlUtils.NewLine), params: ['wuyou']
+        } as ParamSql);
 
 
-
+    expect(from(Blog).where(b => b.Id > 100 && Sql.in(b.UserId, subQuery)).toSql())
+        .toEqual({
+            sql: ["select * from Blog",
+                "where (Id > ? and UserId in (select user_id from users",
+                "where name = ?))"]
+                .join(SqlUtils.NewLine), params: [100,'wuyou']
+        } as ParamSql);
 });
 
 
