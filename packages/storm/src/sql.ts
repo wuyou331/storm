@@ -2,23 +2,33 @@ import { assertCallExpression, assertExpression, assertIdentifier, assertPropert
 import { SqlExpr } from "./sql_expr_type";
 
 export class Sql {
-    static in<T>(field: any, subQuery: SqlExpr<T>) {
+    static in<T>(field: any, subQuery: SqlExpr<T>|any[]) {
         return true
     }
-    static notIn<T>(field: any, subQuery: SqlExpr<T>) {
+    static notIn<T>(field: any, subQuery: SqlExpr<T>|any[]) {
         return true
     }
 }
 
 
 export class SqlCallCheck {
-    static in(expr: any): boolean {
+    static isSqlCall(expr: any): boolean {
         assertCallExpression(expr)
         assertPropertyAccessExpression(expr.expression)
         assertIdentifier(expr.expression.expression)
-
-        return (expr.expression.expression.escapedText == Sql.name && expr.expression.name.escapedText == Sql.in.name)
-
-
+        return expr.expression.expression.escapedText == Sql.name
     }
+
+    static in(expr: any): boolean {
+        assertCallExpression(expr)
+        assertPropertyAccessExpression(expr.expression)
+        return SqlCallCheck.isSqlCall(expr) && (expr.expression.name.escapedText == Sql.in.name)
+    }
+
+    static notIn(expr: any): boolean {
+        assertCallExpression(expr)
+        assertPropertyAccessExpression(expr.expression)
+        return SqlCallCheck.isSqlCall(expr) && (expr.expression.name.escapedText == Sql.notIn.name)
+    }
+
 }

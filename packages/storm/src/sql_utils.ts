@@ -4,7 +4,7 @@ import { Meta } from "./meta";
 import { SqlExprContext, SqlTableJoin } from "./sql_expr";
 import { isSqlExp, ParamSql, SqlExpr } from "./sql_expr_type";
 import { updateIgnore, _SQLCHAR } from 'storm';
-import { AsExpression, isAsExpression, assertAsExpression } from './tsexpr_type';
+import { AsExpression, isAsExpression, assertAsExpression, isArrayLiteralExpression } from './tsexpr_type';
 import { SqlCallCheck } from "./sql";
 import { DefaultSqlExpr } from 'storm';
 
@@ -79,12 +79,12 @@ export class SqlUtils {
         else if (partExpr.kind === ExpressionKind.TrueKeyword) return "1==1";
         else if (partExpr.kind === ExpressionKind.FalseKeyword) return "1<>1";
         else if (isCallExpression(partExpr)) {
-            if (SqlCallCheck.in(partExpr)) {
+            if (SqlCallCheck.in(partExpr) || SqlCallCheck.notIn(partExpr)) {
                 let left = this.convertVal(context, topExpr, partExpr.arguments[0], parms)
                 let right = this.convertVal(context, topExpr, partExpr.arguments[1], parms)
                 left = (left instanceof ParamSql) ? left.sql : left
                 right = (right instanceof ParamSql) ? right.sql : right
-                return `${left} in (${right})`
+                return `${left} ${SqlCallCheck.notIn(partExpr) ? "not " : ""}in (${right})`
             }
             return "abc"
         }
@@ -110,25 +110,47 @@ export class SqlUtils {
                 return SqlUtils.propertyAccessByVar(context, topExpr, expr)
             }
         } else if (isIdentifier(expr)) {
-            // lambda中直接访问变量
+            // lambda中直接访问变量            
             const val = topExpr.context[expr.escapedText]
             if (isSqlExp(val)) {
                 if (parms === undefined) {
                     return val.toMergeSql()
                 } else {
-
                     return val.toSql(parms)
+                }
+            } else if (val instanceof Array) {
+                if (parms === undefined) {
+                    let arrStr = ""
+                    for (const v of val) {
+                        if (arrStr.length > 0) arrStr += ","
+                        if (typeof (v) === "string") {
+                            arrStr += `${context.sqlChar.CharacterQuotes}${v}${context.sqlChar.CharacterQuotes}`
+                        } else if (typeof (v) === "number") {
+                            arrStr += `${v}`
+                        }
+                    }
+                    return arrStr;
+                } else {
+                    parms.push(val)
+                    return "?"
                 }
             } else {
                 if (parms === undefined)
-                    return topExpr.context[expr.escapedText]
+                    return val
                 else {
-                    parms.push(topExpr.context[expr.escapedText])
+                    parms.push(val)
                     return "?"
                 }
             }
 
 
+        } else if (isArrayLiteralExpression(expr)) {
+            let arrStr = ""
+            for (const v of expr.elements) {
+                if (arrStr.length > 0) arrStr += ","
+                arrStr += `${SqlUtils.convertVal(context, topExpr, v, parms)}`
+            }
+            return arrStr;
         }
         else if (isNumericLiteral(expr)) {
             if (parms === undefined)

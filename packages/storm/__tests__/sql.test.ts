@@ -119,6 +119,12 @@ test('where sql in', () => {
             "where name = 'wuyou')"]
             .join(SqlUtils.NewLine));
 
+    expect(from(Blog).where(b => Sql.notIn(b.UserId, subQuery)).toMergeSql())
+        .toEqual(["select * from Blog",
+            "where UserId not in (select user_id from users",
+            "where name = 'wuyou')"]
+            .join(SqlUtils.NewLine));
+
     expect(from(Blog).where(b => Sql.in(b.UserId, subQuery)).toSql())
         .toEqual({
             sql: ["select * from Blog",
@@ -133,8 +139,22 @@ test('where sql in', () => {
             sql: ["select * from Blog",
                 "where (Id > ? and UserId in (select user_id from users",
                 "where name = ?))"]
-                .join(SqlUtils.NewLine), params: [100,'wuyou']
+                .join(SqlUtils.NewLine), params: [100, 'wuyou']
         } as ParamSql);
+
+
+    expect(from(Blog).where(b => Sql.in(b.UserId, [1, 2, 3, 4, 5])).toMergeSql())
+        .toEqual(["select * from Blog",
+            "where UserId in (1,2,3,4,5)"]
+            .join(SqlUtils.NewLine));
+
+
+    let arr = [1, 2, 3, 4, 5]
+    expect(from(Blog).where(b => Sql.in(b.UserId, arr)).toMergeSql())
+        .toEqual(["select * from Blog",
+            "where UserId in (1,2,3,4,5)"]
+            .join(SqlUtils.NewLine));
+
 });
 
 
@@ -222,6 +242,7 @@ test("update", () => {
 test("delete", () => {
     expect(SqlUtils.delete(User, b => b.Id === 1))
         .toEqual(["delete from users", "where user_id = 1"].join(SqlUtils.NewLine))
+
 
     expect(SqlUtils.delete(User, b => b.Id === 1, true))
         .toEqual({ sql: ["delete from users", "where user_id = ?"].join(SqlUtils.NewLine), params: [1] } as ParamSql)
