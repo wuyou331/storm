@@ -3,7 +3,6 @@ import { Expression } from "tst-expression";
 import * as sqlite3 from 'sqlite3';
 import * as storm from 'storm';
 import { SqliteSqlExpr } from "./sqlite_expr";
-import { ParamSql } from './../../storm/src/sql_expr_type';
 
 export class SqliteDatabase implements storm.Database {
     private readonly db: sqlite3.Database
@@ -17,7 +16,7 @@ export class SqliteDatabase implements storm.Database {
         const paramSql = storm.SqlUtils.deleteExpr(ctor, where, true) as storm.ParamSql
         return this.excuteSqlReturnChanges(paramSql)
     }
-    
+
     deleteAll<T extends object>(ctor: new () => T): Promise<number> {
         const paramSql = storm.SqlUtils.deleteExpr(ctor, undefined, true) as storm.ParamSql
         return this.excuteSqlReturnChanges(paramSql)
@@ -41,7 +40,7 @@ export class SqliteDatabase implements storm.Database {
     }
 
     /** 执行SQL语句并返回受影响的行数     */
-    private excuteSqlReturnChanges(paramSql: ParamSql): Promise<number> {
+    private excuteSqlReturnChanges(paramSql: storm.ParamSql): Promise<number> {
         const stmt: sqlite3.Statement | sqlite3.RunResult = this.db.prepare(paramSql.sql)
         return new Promise<number>((resolve, reject) => {
             stmt.run(paramSql.params, (err, row) => {

@@ -1,5 +1,5 @@
 import { Expression } from "tst-expression";
-import { ParamSql, SqlExpr } from "./sql_expr_type";
+import { ParamSql, SqlExpr } from "./sql_expr";
 
 
 export interface Database {

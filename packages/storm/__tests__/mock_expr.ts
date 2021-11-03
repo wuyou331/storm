@@ -1,5 +1,5 @@
-import { DefaultSqlExpr } from "../src/sql_expr";
-import { SqlExpr } from "../src/sql_expr_type";
+import { DefaultSqlExpr } from "../src/sql_expr_default";
+import { SqlExpr } from "../src/sql_expr";
 
 export class MockExpr<T> extends DefaultSqlExpr<T>  {
 

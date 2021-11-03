@@ -1,7 +1,7 @@
 import { Blog, User, Comment } from "./model";
 import { SqlUtils } from "../src/sql_utils";
 import { From as from } from "./mock_expr";
-import { ParamSql } from './../src/sql_expr_type';
+import { ParamSql } from './../src/sql_expr';
 import { Sql } from './../src/sql';
 
 

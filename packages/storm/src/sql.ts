@@ -1,5 +1,5 @@
 import { assertCallExpression, assertExpression, assertIdentifier, assertPropertyAccessExpression, Expression } from "tst-expression";
-import { SqlExpr } from "./sql_expr_type";
+import { SqlExpr } from "./sql_expr";
 
 export class Sql {
     static in<T>(field: any, subQuery: SqlExpr<T>|any[]) {

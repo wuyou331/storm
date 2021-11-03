@@ -1,8 +1,7 @@
 import { assertArrowFunctionExpression, assertExpression, assertIdentifier, assertParameterExpression, assertPropertyAccessExpression, Expression, ExpressionKind, ExpressionNode, IdentifierExpressionNode, isBinaryExpression, isCallExpression, isIdentifier, isNumericLiteral, isObjectLiteralExpression, isParameterExpression, isParenthesizedExpression, isPropertyAccessExpression, isPropertyAssignmentExpression, isShorthandPropertyAssignmentExpression, isStringLiteral } from "tst-expression";
-import { isFunction, isNumber } from "util";
 import { Meta } from "./meta";
-import { SqlExprContext, SqlTableJoin } from "./sql_expr";
-import { isSqlExp, ParamSql, SqlExpr } from "./sql_expr_type";
+import { SqlExprContext, SqlTableJoin } from "./sql_expr_default";
+import { isSqlExp, ParamSql, SqlExpr } from "./sql_expr";
 import { updateIgnore, _SQLCHAR } from 'storm';
 import { AsExpression, isAsExpression, assertAsExpression, isArrayLiteralExpression } from './tsexpr_type';
 import { SqlCallCheck } from "./sql";
