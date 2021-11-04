@@ -1,18 +1,23 @@
 
 import { Expression } from "tst-expression";
-import * as sqlite3 from 'sqlite3';
+import * as mssql from 'mssql';
 import * as storm from 'storm';
-import { SqliteSqlExpr } from "./sqlite_expr";
+import { MsSqlExpr } from './mssql_expr';
 
-export class SqliteDatabase implements storm.Database {
-    private readonly db: sqlite3.Database
-    constructor(connStr: string) {
-        this.db = new sqlite3.Database(connStr);
+export class MssqlDatabase implements storm.Database {
+    private db: mssql.ConnectionPool
+    constructor(private config: mssql.config) {
+
 
     }
 
+    static async connect(config: mssql.config) {
+        const conn = new MssqlDatabase(config);
+        conn.db = await mssql.connect(config)
+    }
 
-    public from = <T extends object>(ctor: new () => T, alias?: string): storm.SqlExpr<T> => new SqliteSqlExpr<T>(ctor, this, alias)
+
+    public from = <T extends object>(ctor: new () => T, alias?: string): storm.SqlExpr<T> => new MsSqlExpr<T>(ctor, this, alias)
 
     delete<T extends object>(ctor: new () => T, where: Expression<(t: T) => boolean>): Promise<number> {
         const paramSql = storm.SqlUtils.deleteExpr(ctor, where, true) as storm.ParamSql
@@ -43,72 +48,92 @@ export class SqliteDatabase implements storm.Database {
 
     /** 执行SQL语句并返回受影响的行数     */
     private excuteSqlReturnChanges(paramSql: storm.ParamSql): Promise<number> {
-        const stmt: sqlite3.Statement | sqlite3.RunResult = this.db.prepare(paramSql.sql)
+        const request = this.db.request()
+        paramSql.params.forEach((param, index) => {
+            request.input(`${index}`, param)
+        })
+
         return new Promise<number>((resolve, reject) => {
-            stmt.run(paramSql.params, (err, row) => {
+            request.execute(paramSql.sql, (err, result, returnVal) => {
                 if (err) {
                     reject(err)
                 } else {
-                    resolve((stmt as sqlite3.RunResult).changes)
+                    resolve(result.returnValue)
                 }
             })
-        });
+        })
     }
 
     insert<T extends object>(item: Expression<T>): Promise<undefined>
     insert<T extends object>(item: Expression<T>, returnId: true): Promise<number>
     insert<T extends object>(item: Expression<T>, returnId?: boolean): Promise<number> | Promise<undefined> {
         const paramSql = storm.SqlUtils.insertExpr(item, true) as storm.ParamSql
-        const stmt: sqlite3.Statement | sqlite3.RunResult = this.db.prepare(paramSql.sql)
+        const request = this.db.request()
+        paramSql.params.forEach((param, index) => {
+            request.input(`${index}`, param)
+        })
+
         return new Promise<number>((resolve, reject) => {
-            stmt.run(paramSql.params, (err, row) => {
+            request.execute(paramSql.sql, (err, _, returnVal) => {
                 if (err) {
                     reject(err)
                 } else {
-                    resolve((stmt as sqlite3.RunResult).lastID)
+                    resolve(returnId ? returnVal : undefined)
                 }
             })
-        });
+        })
 
     }
 
 
     insertFields<T extends object>(item: Expression<T>): Promise<undefined>
     insertFields<T extends object>(item: Expression<T>, returnId: true): Promise<number>
-    insertFields<T extends object>(item: Expression<T>, returnId?: boolean): Promise<undefined> | Promise<number> {
-        const paramSql = storm.SqlUtils.insertFields(item, true) as storm.ParamSql
-        const stmt: sqlite3.Statement | sqlite3.RunResult = this.db.prepare(paramSql.sql)
+    insertFields<T extends object>(item: Expression<T>, returnId?: boolean): Promise<undefined> | Promise<number>  {
+        const paramSql = storm.SqlUtils.insertFieldsExpr(item, true) as storm.ParamSql
+        const request = this.db.request()
+        paramSql.params.forEach((param, index) => {
+            request.input(`${index}`, param)
+        })
+
         return new Promise<number>((resolve, reject) => {
-            stmt.run(paramSql.params, (err, row) => {
+            request.execute(paramSql.sql, (err, _, returnVal) => {
                 if (err) {
                     reject(err)
                 } else {
-                    resolve((stmt as sqlite3.RunResult).lastID)
+                    resolve(returnId ? returnVal : undefined)
+                }
+            })
+        })
+    }
+
+    queryList<T>(sql: storm.ParamSql): Promise<T[]> {
+        const request = this.db.request()
+        sql.params.forEach((param, index) => {
+            request.input(`${index}`, param)
+        })
+        return new Promise<T[]>((resolve, reject) => {
+            request.query<T>(sql.sql, (err, rows) => {
+                if (err) {
+                    reject(err)
+                } else {
+                    resolve(rows.recordset)
                 }
             })
         });
-    }
+    };
 
 
-    public queryList<T>(sql: storm.ParamSql): Promise<T[]> {
-        return new Promise<T[]>((resolve, reject) => {
-            this.db.all(sql.sql, sql.params, (err, rows) => {
-                if (err) {
-                    reject(err)
-                } else {
-                    resolve(rows)
-                }
-            });
-        });
-    }
-
-    public querySingle<T>(sql: storm.ParamSql): Promise<T> {
+    querySingle<T>(sql: storm.ParamSql): Promise<T> {
+        const request = this.db.request()
+        sql.params.forEach((param, index) => {
+            request.input(`${index}`, param)
+        })
         return new Promise<T>((resolve, reject) => {
-            this.db.all(sql.sql, sql.params, (err, rows) => {
+            request.query<T>(sql.sql, (err, rows) => {
                 if (err) {
                     reject(err)
                 } else {
-                    resolve(rows.length > 0 ? rows[0] : undefined)
+                    resolve(rows.recordset.length > 0 ? rows.recordset[0] : undefined)
                 }
             });
         });

@@ -5,9 +5,7 @@
     "test": "jest"
   },
   "devDependencies": {
-    "tst-expression": "^1.0.2",
-    "tst-expression-transformer": "^1.1.0",
-    "ttypescript": "^1.5.12"
+    "tst-expression": "^1.0.2"
   },
   "dependencies": {
     "reflect-metadata": "^0.1.13"

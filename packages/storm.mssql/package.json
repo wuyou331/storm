@@ -1,0 +1,24 @@
+{
+    "name": "storm.mssql",
+    "version": "0.0.1",
+    "scripts": {
+        "test": "jest"
+    },
+    "dependencies": {
+        "@types/mssql": "^7.1.4",
+        "mssql": "^7.2.1",
+        "storm": "0.0.1"
+    },
+    "jest": {
+        "preset": "ts-jest",
+        "testEnvironment": "node",
+        "testMatch": [
+            "**/?(*.)(test).ts"
+        ],
+        "globals": {
+            "ts-jest": {
+                "compiler": "ttypescript"
+            }
+        }
+    }
+}
