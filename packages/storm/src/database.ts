@@ -8,17 +8,24 @@ export interface Database {
     queryList<T>(sql: ParamSql): Promise<T[]>
     querySingle<T>(sql: ParamSql): Promise<T>
 
-    /** 插入记录
+    /** 插入数据，包含实体的全部列
      *  @example
      *  insert(blog)
      *  or
      *  insert({ UserId: 1, Title: blog.Title } as Blog)
      */
-    insert<T extends object>(item: T | Expression<() => T>): Promise<undefined>;
-    insert<T extends object>(item: T | Expression<() => T>, returnId: true): Promise<number>;
-    insert<T extends object>(item: T | Expression<() => T>, returnId?: boolean): Promise<number> | Promise<undefined>
+    insert<T extends object>(item: Expression<T>): Promise<undefined>;
+    insert<T extends object>(item: Expression<T>, returnId: true): Promise<number>;
+    insert<T extends object>(item: Expression<T>, returnId?: boolean): Promise<number> | Promise<undefined>
 
 
+    /** 插入数据，只包含实体的部分列
+     *  @example
+     *  insertFields({ UserId: 1, Title: blog.Title } as Blog)
+     */
+    insertFields<T extends object>(item: Expression<T>): Promise<undefined>;
+    insertFields<T extends object>(item: Expression<T>, returnId: true): Promise<number>;
+    insertFields<T extends object>(item: Expression<T>, returnId?: boolean): Promise<number> | Promise<undefined>
 
 
     /** 更新所有字段
@@ -47,7 +54,7 @@ export interface Database {
     updateFieldsForAll<T extends object>(fields: Expression<T>): Promise<number>
 
 
-    delete<T extends object>(ctro:new()=>T, where: Expression<(t: T) => boolean>): Promise<number>
+    delete<T extends object>(ctro: new () => T, where: Expression<(t: T) => boolean>): Promise<number>
     deleteAll<T extends object>(ctor: new () => T): Promise<number>
 
 }

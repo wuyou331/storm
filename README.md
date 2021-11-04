@@ -60,6 +60,13 @@ db.updateFields({ Title: "abc" } as Blog, b => b.Id === 1)
 db.delete(Blog, b => b.Id === 1)
 //delete from Blog where Id = 1
 
+//复杂条件删除
+const subQuery = from(User).where(u => u.Name === "eric johnson").select(u => u.Id)
+db.delete(Blog,b => Sql.in(b.UserId, subQuery)
+//delete from Blog 
+//where UserId in (select Id from User",
+//                 where Name = 'eric johnson')
+
 //全表删除
 db.deleteAll(Blog)
 //delete from Blog

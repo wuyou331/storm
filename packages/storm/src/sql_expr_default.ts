@@ -2,7 +2,7 @@ import { assertArrowFunctionExpression, assertExpression, Expression, isStringLi
 import { Database } from "./database";
 import { SqlExpr, SqlJoin2, SqlJoin3, SqlJoin4, SqlJoin5, SqlJoin6, ParamSql } from "./sql_expr";
 import { SqlUtils } from './sql_utils';
-import { _SQLCHAR } from 'storm';
+
 
 type JoinType = "Left" | "Right" | "Full" | "Inner" | ""
 
@@ -12,14 +12,14 @@ export class SqlTableJoin {
 
 
 /** SQL不同数据库的方言 */
-export class SqlDialectDialectChar {
+export class SqlDialectChar {
 	/** 字符格式的引号 */
 	CharacterQuotes = "'"
 	/** SQL参数占位符 */
 	ParameterPlaceholder = "?"
 }
 
-const _SQLCHAR = new SqlDialectDialectChar()
+const _SQLCHAR = new SqlDialectChar()
 
 /** 生成SQL语句所需的全部参数 */
 export class SqlExprContext {
@@ -34,7 +34,7 @@ export class SqlExprContext {
 
 	public take?: number
 
-	constructor(public sqlChar: SqlDialectDialectChar) {
+	constructor(public sqlChar: SqlDialectChar) {
 
 	}
 }
@@ -46,7 +46,7 @@ export abstract class DefaultSqlExpr<T> implements SqlExpr<T>{
 
 	protected context: SqlExprContext
 	protected database: Database
-	constructor(mianCtor: new () => T, database: Database, alias?: string, sqlChar?: SqlDialectDialectChar) {
+	constructor(mianCtor: new () => T, database: Database, alias?: string, sqlChar?: SqlDialectChar) {
 		this.context = new SqlExprContext(sqlChar ?? _SQLCHAR)
 		this.context.joins.push(new SqlTableJoin(mianCtor, alias))
 		this.database = database

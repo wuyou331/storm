@@ -10,6 +10,8 @@ export class SqliteDatabase implements storm.Database {
         this.db = new sqlite3.Database(connStr);
 
     }
+
+
     public from = <T extends object>(ctor: new () => T, alias?: string): storm.SqlExpr<T> => new SqliteSqlExpr<T>(ctor, this, alias)
 
     delete<T extends object>(ctor: new () => T, where: Expression<(t: T) => boolean>): Promise<number> {
@@ -71,7 +73,22 @@ export class SqliteDatabase implements storm.Database {
     }
 
 
-
+    insertFields<T extends object>(item: Expression<T>): Promise<undefined>;
+    insertFields<T extends object>(item: Expression<T>, returnId: true): Promise<number>;
+    insertFields<T extends object>(item: Expression<T>, returnId?: boolean): Promise<undefined> | Promise<number>;
+    insertFields(item: any, returnId?: any): Promise<undefined> | Promise<number> {
+        const paramSql = storm.SqlUtils.insertFields(item, true) as storm.ParamSql
+        const stmt: sqlite3.Statement | sqlite3.RunResult = this.db.prepare(paramSql.sql)
+        return new Promise<number>((resolve, reject) => {
+            stmt.run(paramSql.params, (err, row) => {
+                if (err) {
+                    reject(err)
+                } else {
+                    resolve((stmt as sqlite3.RunResult).lastID)
+                }
+            })
+        });
+    }
 
 
     public queryList<T>(sql: storm.ParamSql): Promise<T[]> {

@@ -1,11 +1,9 @@
-import { assertArrowFunctionExpression, assertExpression, assertIdentifier, assertParameterExpression, assertPropertyAccessExpression, Expression, ExpressionKind, ExpressionNode, IdentifierExpressionNode, isBinaryExpression, isCallExpression, isIdentifier, isNumericLiteral, isObjectLiteralExpression, isParameterExpression, isParenthesizedExpression, isPropertyAccessExpression, isPropertyAssignmentExpression, isShorthandPropertyAssignmentExpression, isStringLiteral } from "tst-expression";
+import { assertArrowFunctionExpression, assertExpression, assertIdentifier, assertPropertyAccessExpression, Expression, ExpressionKind, ExpressionNode, IdentifierExpressionNode, isBinaryExpression, isCallExpression, isIdentifier, isNumericLiteral, isObjectLiteralExpression, isParenthesizedExpression, isPropertyAccessExpression, isPropertyAssignmentExpression, isShorthandPropertyAssignmentExpression, isStringLiteral } from "tst-expression";
 import { Meta } from "./meta";
-import { SqlExprContext, SqlTableJoin } from "./sql_expr_default";
-import { isSqlExp, ParamSql, SqlExpr } from "./sql_expr";
-import { updateIgnore, _SQLCHAR } from 'storm';
-import { AsExpression, isAsExpression, assertAsExpression, isArrayLiteralExpression } from './tsexpr_type';
+import { SqlExprContext, SqlTableJoin, SqlDialectChar } from "./sql_expr_default";
+import { isSqlExp, ParamSql } from "./sql_expr";
+import { isAsExpression, assertAsExpression, isArrayLiteralExpression } from './tsexpr_type';
 import { SqlCallCheck } from "./sql";
-import { DefaultSqlExpr } from 'storm';
 
 export class SqlUtils {
 
@@ -355,9 +353,31 @@ export class SqlUtils {
      *  or
      *  SqlUtils.insert({ UserId: 1, Title: blog.Title } as Blog)
      */
-    static insert<T extends object>(item: T | Expression<() => T>, merge?: boolean, lastIdSql?: string): string | ParamSql {
+    static insert<T extends object>(item: Expression<T>, merge?: boolean, lastIdSql?: string): string | ParamSql {
         return SqlUtils.insertExpr(item, merge, lastIdSql)
     }
+
+    static insertExpr<T extends object>(item: any, merge?: boolean, lastIdSql?: string): string | ParamSql {
+        const { ctor, obj } = SqlUtils.getCtorByExpr(item)
+        return SqlUtils.insertSql(obj, ctor, Meta.getMembers(ctor), merge, lastIdSql)
+    }
+
+
+    /** 生成insert SQL语句 只包含部分列
+     *  @example
+     *  SqlUtils.insert({ UserId: 1, Title: blog.Title } as Blog)
+     */
+    static insertFields<T extends object>(item: Expression<T>, merge?: boolean, lastIdSql?: string): string | ParamSql {
+        return SqlUtils.insertFieldsExpr(item, merge, lastIdSql)
+    }
+
+    static insertFieldsExpr<T extends object>(item: any, merge?: boolean, lastIdSql?: string): string | ParamSql {
+        assertExpression(item)
+        assertAsExpression(item.expression)
+        const { ctor, obj } = SqlUtils.getCtorByExpr(item)
+        return SqlUtils.insertSql(obj, ctor, Object.keys(obj), merge, lastIdSql)
+    }
+
 
     /**
      *  生成insert SQL语句
@@ -365,29 +385,14 @@ export class SqlUtils {
      * @param merge 返回是否参数化的sql语句
      * @param lastIdSql 执行完insert后，返回id的sql语句
      */
-    static insertExpr<T extends object>(item: any, merge?: boolean, lastIdSql?: string): string | ParamSql {
-        assertExpression(item)
-        let ctor: new () => T
-        let obj: T
-        if (isIdentifier(item.expression)) {
-            obj = item.compiled as T;
-            ctor = obj.constructor as new () => T
-        }
-        else if (isAsExpression(item.expression)) {
-            ctor = item.context[item.expression.type.typeName.escapedText]
-            obj = item.compiled as T
-        } else {
-            throw new Error("不支持的调用方式")
-        }
+    static insertSql<T extends object>(item: T, ctor: new () => T, fields: string[], merge?: boolean, lastIdSql?: string): string | ParamSql {
 
-
-        const fields = Meta.getMembers(ctor)
         const tableName = SqlUtils.tableNameByCtor(ctor)
         const columns = SqlUtils.insertColumns(ctor, fields)
 
         if (merge) {
             const parms = []
-            const values = SqlUtils.insertValues(ctor, obj, fields, parms)
+            const values = SqlUtils.insertValues(ctor, item, fields, parms)
             const sql = new ParamSql()
             sql.sql = `insert into ${tableName} (${columns}) values (${values})`
             sql.params = parms
@@ -396,7 +401,7 @@ export class SqlUtils {
             return sql
 
         } else {
-            let sql = `insert into ${tableName} (${columns}) values (${SqlUtils.insertValues(ctor, obj, fields)})`
+            let sql = `insert into ${tableName} (${columns}) values (${SqlUtils.insertValues(ctor, item, fields)})`
             if (lastIdSql)
                 sql += `;${this.NewLine}${lastIdSql}`
             return sql
@@ -566,7 +571,8 @@ export class SqlUtils {
 
         if (where) {
             assertExpression(where)
-            const context = new SqlExprContext(_SQLCHAR)
+
+            const context = new SqlExprContext(new SqlDialectChar())
             const joinTable = new SqlTableJoin(ctor)
             context.joins.push(joinTable)
             context.whereConditions.push(where)
@@ -635,7 +641,7 @@ export class SqlUtils {
         let whereStr = ""
         if (where) {
             assertExpression(where)
-            const context = new SqlExprContext(_SQLCHAR)
+            const context = new SqlExprContext(new SqlDialectChar())
             const joinTable = new SqlTableJoin(ctor)
             context.joins.push(joinTable)
             context.whereConditions.push(where)

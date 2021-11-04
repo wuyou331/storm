@@ -192,9 +192,16 @@ test('insert', () => {
         .toEqual("insert into Blog (UserId,Title,Context) values (1,'Hello World!',null)");
 
 
+    expect(SqlUtils.insertFields({ UserId: 1, Title: blog.Title } as Blog))
+        .toEqual("insert into Blog (UserId,Title) values (1,'Hello World!')");
+
+
     expect(SqlUtils.insert({ UserId: 1, Title: blog.Title } as Blog, true))
         .toEqual({ sql: "insert into Blog (UserId,Title,Context) values (?,?,?)", params: [1, 'Hello World!', null] } as ParamSql);
 
+
+    expect(SqlUtils.insertFields({ UserId: 1, Title: blog.Title } as Blog, true))
+        .toEqual({ sql: "insert into Blog (UserId,Title) values (?,?)", params: [1, 'Hello World!'] } as ParamSql);
 });
 
 
