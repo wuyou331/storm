@@ -38,9 +38,15 @@ db.from(Blog).where(b => Sql.in(b.UserId, subQuery)
 #### Insert
 ```typescript
 const blog = new Blog()
-blog.name = "Hello World!"
+blog.Title = "Hello World!"
+//插入全部字段
 db.insert(blog)
-db.insert({ name: "Hello World!" } as Blog)
+db.insert({ Title: "Hello World!" } as Blog)
+//insert into Blog (UserId,Title,Context) values (1,'Hello World!',null)
+
+//插入部分字段
+db.insertFields({ Title: "Hello World!" } as Blog)
+//insert into Blog (Title) values ('Hello World!')
 ```
 
 #### Update
