@@ -3,20 +3,26 @@ import { Expression } from "tst-expression";
 import * as mssql from 'mssql';
 import * as storm from 'storm';
 import { MsSqlExpr } from './mssql_expr';
+import { ParamSql } from './../../storm/src/sql_expr';
 
 export class MssqlDatabase implements storm.Database {
     private db: mssql.ConnectionPool
-    constructor(private config: mssql.config) {
+    constructor(private connectString: string) {
 
 
     }
 
-    static async connect(config: mssql.config) {
-        const conn = new MssqlDatabase(config);
-        conn.db = await mssql.connect(config)
+    async connect() {
+        this.db = await mssql.connect(this.connectString)
+
     }
 
+    async getDb() {
+        if (this.db == null)
+            await this.connect()
+        return this.db
 
+    }
     public from = <T extends object>(ctor: new () => T, alias?: string): storm.SqlExpr<T> => new MsSqlExpr<T>(ctor, this, alias)
 
     delete<T extends object>(ctor: new () => T, where: Expression<(t: T) => boolean>): Promise<number> {
@@ -47,8 +53,8 @@ export class MssqlDatabase implements storm.Database {
     }
 
     /** 执行SQL语句并返回受影响的行数     */
-    private excuteSqlReturnChanges(paramSql: storm.ParamSql): Promise<number> {
-        const request = this.db.request()
+    private async excuteSqlReturnChanges(paramSql: storm.ParamSql): Promise<number> {
+        const request = (await this.getDb()).request()
         paramSql.params.forEach((param, index) => {
             request.input(`${index}`, param)
         })
@@ -68,46 +74,40 @@ export class MssqlDatabase implements storm.Database {
     insert<T extends object>(item: Expression<T>, returnId: true): Promise<number>
     insert<T extends object>(item: Expression<T>, returnId?: boolean): Promise<number> | Promise<undefined> {
         const paramSql = storm.SqlUtils.insertExpr(item, true) as storm.ParamSql
-        const request = this.db.request()
-        paramSql.params.forEach((param, index) => {
-            request.input(`${index}`, param)
-        })
-
-        return new Promise<number>((resolve, reject) => {
-            request.execute(paramSql.sql, (err, _, returnVal) => {
-                if (err) {
-                    reject(err)
-                } else {
-                    resolve(returnId ? returnVal : undefined)
-                }
-            })
-        })
-
+        return this.excuteInsert(paramSql, returnId)
     }
 
 
     insertFields<T extends object>(item: Expression<T>): Promise<undefined>
     insertFields<T extends object>(item: Expression<T>, returnId: true): Promise<number>
-    insertFields<T extends object>(item: Expression<T>, returnId?: boolean): Promise<undefined> | Promise<number>  {
+    insertFields<T extends object>(item: Expression<T>, returnId?: boolean): Promise<undefined> | Promise<number> {
         const paramSql = storm.SqlUtils.insertFieldsExpr(item, true) as storm.ParamSql
-        const request = this.db.request()
+        return this.excuteInsert(paramSql, returnId)
+    }
+
+    private async excuteInsert(paramSql: ParamSql, returnId: boolean) {
+        const request = (await this.getDb()).request()
         paramSql.params.forEach((param, index) => {
             request.input(`${index}`, param)
         })
+        if (returnId) {
+            paramSql.sql += ';select SCOPE_IDENTITY() as id;';
+        }
 
         return new Promise<number>((resolve, reject) => {
-            request.execute(paramSql.sql, (err, _, returnVal) => {
+
+            request.query(paramSql.sql, (err, result) => {
                 if (err) {
                     reject(err)
                 } else {
-                    resolve(returnId ? returnVal : undefined)
+                    resolve(returnId ? 1 : undefined)
                 }
             })
         })
     }
 
-    queryList<T>(sql: storm.ParamSql): Promise<T[]> {
-        const request = this.db.request()
+    async queryList<T>(sql: storm.ParamSql): Promise<T[]> {
+        const request = (await this.getDb()).request()
         sql.params.forEach((param, index) => {
             request.input(`${index}`, param)
         })
@@ -123,8 +123,8 @@ export class MssqlDatabase implements storm.Database {
     };
 
 
-    querySingle<T>(sql: storm.ParamSql): Promise<T> {
-        const request = this.db.request()
+    async querySingle<T>(sql: storm.ParamSql): Promise<T> {
+        const request = (await this.getDb()).request()
         sql.params.forEach((param, index) => {
             request.input(`${index}`, param)
         })
