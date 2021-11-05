@@ -1,11 +1,11 @@
 import { assertCallExpression, assertExpression, assertIdentifier, assertPropertyAccessExpression, Expression } from "tst-expression";
-import { SqlExpr } from "./sql_expr";
+import { SelectExpr } from "./select_expr";
 
 export class Sql {
-    static in<T>(field: any, subQuery: SqlExpr<T>|any[]) {
+    static in<T>(field: any, subQuery: SelectExpr<T>|any[]) {
         return true
     }
-    static notIn<T>(field: any, subQuery: SqlExpr<T>|any[]) {
+    static notIn<T>(field: any, subQuery: SelectExpr<T>|any[]) {
         return true
     }
 }

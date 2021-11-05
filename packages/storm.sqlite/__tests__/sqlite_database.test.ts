@@ -12,6 +12,7 @@ test("insert", async () => {
     await expect(db.insert(blog, true)).resolves.toBeGreaterThan(0)
     await expect(db.insert({ name: "Hello World!" } as Blog)).resolves.toBeGreaterThan(0)
 
+    await expect(db.insertFields({ name: "Hello World!" } as Blog)).resolves.toBeGreaterThan(0)
 })
 
 

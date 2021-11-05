@@ -6,7 +6,7 @@ export class ParamSql {
 	public params: any[] = []
 
 }
-export interface SqlExpr<T> {
+export interface SelectExpr<T> {
 	join<T1>(ctor2: new () => T1): SqlJoin2<T, T, T1>
 	join<T1, T2>(ctor1: new () => T1, ctor2: new () => T2): SqlJoin2<T, T1, T2>
 	join<T1, T2, T3>(ctor1: new () => T1, ctor2: new () => T2, ctor3?: new () => T3): SqlJoin3<T, T1, T2, T3>
@@ -44,32 +44,32 @@ export interface SqlExpr<T> {
 	fullJoin<T1, T2, T3, T4, T5, T6>(ctor1: new () => T1, ctor2: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4, ctor5?: new () => T5, ctor6?: new () => T6): SqlJoin6<T, T1, T2, T3, T4, T5, T6>
 
 
-	where(predicate: Expression<(m: T) => boolean>): SqlExpr<T>
-	where<T1>(predicate: Expression<(m: T1) => boolean>): SqlExpr<T>
-	where<T1, T2>(predicate: Expression<(t1: T1, t2: T2) => boolean>): SqlExpr<T>
-	where<T1, T2, T3>(predicate: Expression<(t1: T1, t2: T2, t3: T3) => boolean>): SqlExpr<T>
-	where<T1, T2, T3, T4>(predicate: Expression<(t1: T1, t2: T2, t3: T3, t4: T4) => boolean>): SqlExpr<T>
-	where<T1, T2, T3, T4, T5>(predicate: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => boolean>): SqlExpr<T>
-	where<T1, T2, T3, T4, T5, T6>(predicate: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => boolean>): SqlExpr<T>
+	where(predicate: Expression<(m: T) => boolean>): SelectExpr<T>
+	where<T1>(predicate: Expression<(m: T1) => boolean>): SelectExpr<T>
+	where<T1, T2>(predicate: Expression<(t1: T1, t2: T2) => boolean>): SelectExpr<T>
+	where<T1, T2, T3>(predicate: Expression<(t1: T1, t2: T2, t3: T3) => boolean>): SelectExpr<T>
+	where<T1, T2, T3, T4>(predicate: Expression<(t1: T1, t2: T2, t3: T3, t4: T4) => boolean>): SelectExpr<T>
+	where<T1, T2, T3, T4, T5>(predicate: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => boolean>): SelectExpr<T>
+	where<T1, T2, T3, T4, T5, T6>(predicate: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => boolean>): SelectExpr<T>
 
 
 
 	/** Select方法只能调用一次 */
 
-	select(fields?: string): SqlExpr<T>
-	select<TReturn>(fields: Expression<(m: T) => TReturn> | string): SqlExpr<TReturn>
-	select<T1, TReturn>(fields?: Expression<(m: T1) => TReturn> | string): SqlExpr<TReturn>
-	select<T1, T2, TReturn>(fields?: Expression<(t1: T1, t2: T2) => TReturn> | string): SqlExpr<TReturn>
-	select<T1, T2, T3, TReturn>(fields?: Expression<(t1: T1, t2: T2, t3: T3) => TReturn> | string): SqlExpr<TReturn>
-	select<T1, T2, T3, T4, TReturn>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4) => TReturn> | string): SqlExpr<TReturn>
-	select<T1, T2, T3, T4, T5, TReturn>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => TReturn> | string): SqlExpr<TReturn>
-	select<T1, T2, T3, T4, T5, T6, TReturn>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => TReturn> | string): SqlExpr<TReturn>
+	select(fields?: string): SelectExpr<T>
+	select<TReturn>(fields: Expression<(m: T) => TReturn> | string): SelectExpr<TReturn>
+	select<T1, TReturn>(fields?: Expression<(m: T1) => TReturn> | string): SelectExpr<TReturn>
+	select<T1, T2, TReturn>(fields?: Expression<(t1: T1, t2: T2) => TReturn> | string): SelectExpr<TReturn>
+	select<T1, T2, T3, TReturn>(fields?: Expression<(t1: T1, t2: T2, t3: T3) => TReturn> | string): SelectExpr<TReturn>
+	select<T1, T2, T3, T4, TReturn>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4) => TReturn> | string): SelectExpr<TReturn>
+	select<T1, T2, T3, T4, T5, TReturn>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => TReturn> | string): SelectExpr<TReturn>
+	select<T1, T2, T3, T4, T5, T6, TReturn>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => TReturn> | string): SelectExpr<TReturn>
 
 	/** 跳过数量 */
-	skip(n: number): SqlExpr<T>
+	skip(n: number): SelectExpr<T>
 
 	/** 获取数量 */
-	take(n: number): SqlExpr<T>
+	take(n: number): SelectExpr<T>
 
 	/** 生成参数化的SQL语句 */
 	toMergeSql(): string
@@ -83,25 +83,25 @@ export interface SqlExpr<T> {
 	querySingle<TModel>(): Promise<TModel>
 }
 
-export function isSqlExp(expr: any): expr is SqlExpr<any> {
+export function isSqlExp(expr: any): expr is SelectExpr<any> {
 	return typeof (expr) === "object" && ['toSql', 'toMergeSql'].every(m => m in expr)
 }
 
 export interface SqlJoin2<T, T1, T2> {
-	on(on: Expression<(tab1: T1, tab2: T2) => boolean>): SqlExpr<T>
+	on(on: Expression<(tab1: T1, tab2: T2) => boolean>): SelectExpr<T>
 }
 
 export interface SqlJoin3<T, T1, T2, T3> extends SqlJoin2<T, T1, T2> {
-	on(on: Expression<(tab1: T1, tab2: T2, tab3: T3) => boolean>): SqlExpr<T>
+	on(on: Expression<(tab1: T1, tab2: T2, tab3: T3) => boolean>): SelectExpr<T>
 }
 
 export interface SqlJoin4<T, T1, T2, T3, T4> extends SqlJoin3<T, T1, T2, T3> {
-	on(on: Expression<(tab1: T1, tab2: T2, tab3?: T3, tab4?: T4) => boolean>): SqlExpr<T>
+	on(on: Expression<(tab1: T1, tab2: T2, tab3?: T3, tab4?: T4) => boolean>): SelectExpr<T>
 }
 export interface SqlJoin5<T, T1, T2, T3, T4, T5> extends SqlJoin4<T, T1, T2, T3, T4> {
-	on(on: Expression<(tab1: T1, tab2: T2, tab3?: T3, tab4?: T4, tab5?: T5) => boolean>): SqlExpr<T>
+	on(on: Expression<(tab1: T1, tab2: T2, tab3?: T3, tab4?: T4, tab5?: T5) => boolean>): SelectExpr<T>
 }
 export interface SqlJoin6<T, T1, T2, T3, T4, T5, T6> extends SqlJoin5<T, T1, T2, T3, T4, T5> {
-	on(on: Expression<(tab1: T1, tab2: T2, tab3?: T3, tab4?: T4, tab5?: T5, tab6?: T6) => boolean>): SqlExpr<T>
+	on(on: Expression<(tab1: T1, tab2: T2, tab3?: T3, tab4?: T4, tab5?: T5, tab6?: T6) => boolean>): SelectExpr<T>
 }
 

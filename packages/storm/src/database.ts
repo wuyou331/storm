@@ -1,9 +1,9 @@
 import { Expression } from "tst-expression";
-import { ParamSql, SqlExpr } from "./sql_expr";
+import { ParamSql, SelectExpr } from "./select_expr";
 
 
 export interface Database {
-    from<T extends object>(ctor: new () => T, alias?: string): SqlExpr<T>
+    from<T extends object>(ctor: new () => T, alias?: string): SelectExpr<T>
 
     queryList<T>(sql: ParamSql): Promise<T[]>
     querySingle<T>(sql: ParamSql): Promise<T>
