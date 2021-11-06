@@ -106,7 +106,7 @@ export class MssqlDatabase implements storm.Database {
                 if (err) {
                     reject(err)
                 } else {
-                    resolve(returnId ? 1 : undefined)
+                    resolve(returnId ? result.recordset[0]["id"] : undefined)
                 }
             })
         })

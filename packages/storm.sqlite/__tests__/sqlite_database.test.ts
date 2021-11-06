@@ -8,11 +8,11 @@ const db: Database = new SqliteDatabase("__tests__\\data.db")
 test("insert", async () => {
     const blog = new Blog()
     blog.name = "Hello World!"
-    await expect(db.insert(blog)).resolves.toBeGreaterThan(0)
-    await expect(db.insert(blog, true)).resolves.toBeGreaterThan(0)
-    await expect(db.insert({ name: "Hello World!" } as Blog)).resolves.toBeGreaterThan(0)
+    await expect(db.insert(blog))
+    await expect(db.insert(blog, true)).resolves.toBeGreaterThan(1)
+    await expect(db.insert({ name: "Hello World!" } as Blog)).resolves.toBeGreaterThan(1)
 
-    await expect(db.insertFields({ name: "Hello World!" } as Blog)).resolves.toBeGreaterThan(0)
+    await expect(db.insertFields({ name: "Hello World!" } as Blog)).resolves.toBeGreaterThan(1)
 })
 
 
