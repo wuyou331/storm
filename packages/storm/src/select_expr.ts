@@ -55,7 +55,6 @@ export interface SelectExpr<T> {
 
 
 	/** Select方法只能调用一次 */
-
 	select(fields?: string): SelectExpr<T>
 	select<TReturn>(fields: Expression<(m: T) => TReturn> | string): SelectExpr<TReturn>
 	select<T1, TReturn>(fields?: Expression<(m: T1) => TReturn> | string): SelectExpr<TReturn>
@@ -64,6 +63,13 @@ export interface SelectExpr<T> {
 	select<T1, T2, T3, T4, TReturn>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4) => TReturn> | string): SelectExpr<TReturn>
 	select<T1, T2, T3, T4, T5, TReturn>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => TReturn> | string): SelectExpr<TReturn>
 	select<T1, T2, T3, T4, T5, T6, TReturn>(fields?: Expression<(t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => TReturn> | string): SelectExpr<TReturn>
+
+
+	orderBy(fields: Expression<(m: T) => any>): SelectExpr<T>
+	orderBy<T1>(fields: Expression<(m: T1) => any>): SelectExpr<T>
+
+	orderByDescending(fields: Expression<(m: T) => any>): SelectExpr<T>
+	orderByDescending<T1>(fields: Expression<(m: T1) => any>): SelectExpr<T>
 
 	/** 跳过数量 */
 	skip(n: number): SelectExpr<T>

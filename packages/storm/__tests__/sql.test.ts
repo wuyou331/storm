@@ -45,7 +45,7 @@ test('join', () => {
 
     expect(from(Comment)
         .join(Blog).on((c, b) => c.BlogId === b.Id)
-        .join(Blog,User).on((b, bu) => b.UserId === bu.Id)
+        .join(Blog, User).on((b, bu) => b.UserId === bu.Id)
         .join(Comment, User).on((c, cu) => c.UserId === cu.Id)
         .toMergeSql())
         .toEqual(["select * from Comment as c",
@@ -158,6 +158,20 @@ test('where sql in', () => {
 });
 
 
+test(`order`, () => {
+    expect(from(Blog).orderBy(b => b.Id).toMergeSql())
+        .toEqual(["select * from Blog"
+            , "order by Id asc"].join(SqlBuilder.NewLine));
+
+    expect(from(Blog).orderByDescending(b => b.Id).toMergeSql())
+        .toEqual(["select * from Blog"
+            , "order by Id desc"].join(SqlBuilder.NewLine));
+
+
+    expect(from(Blog).orderBy(b => b.Id).orderByDescending(b => b.UserId).toMergeSql())
+        .toEqual(["select * from Blog"
+            , "order by Id asc,UserId desc"].join(SqlBuilder.NewLine));
+})
 
 test('skip & take', () => {
 

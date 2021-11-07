@@ -5,8 +5,5 @@ export class SqliteSqlBuilder extends SqlBuilder {
         super(sqlChar, context, params);
     }
 
-    argPlaceholder() {
-        return '?'
-    }
 
 }

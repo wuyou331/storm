@@ -25,6 +25,10 @@ export const _SQLCHAR = new SqlDialectChar()
 export class SqlExprContext {
 	/** where条件集合 */
 	public whereConditions: Expression<any>[] = []
+
+	/** 排序集合 */
+	public orderby: { expr: Expression<any>, type: "asc" | "desc" }[] = []
+
 	/** join集合包含表和别名,第一个元素是from后面的主表 */
 	public joins: SqlTableJoin[] = []
 	/** select 条件 */
@@ -49,6 +53,16 @@ export abstract class DefaultSelectExpr<T, Tsb extends SqlBuilder> implements Se
 		this.context.joins.push(new SqlTableJoin(mianCtor, alias))
 		this.database = database
 	}
+	orderBy(fields: Expression<(m: T) => any>): SelectExpr<T>
+	orderBy<T1>(fields: Expression<(m: T1) => any>): SelectExpr<T> {
+		this.context.orderby.push({ expr: fields, type: "asc" })
+		return this
+	}
+	orderByDescending(fields: Expression<(m: T) => any>): SelectExpr<T>
+	orderByDescending<T1>(fields: Expression<(m: T1) => any>): SelectExpr<T> {
+		this.context.orderby.push({ expr: fields, type: "desc" })
+		return this
+	}
 
 
 
@@ -60,7 +74,7 @@ export abstract class DefaultSelectExpr<T, Tsb extends SqlBuilder> implements Se
 	join<T1, T2, T3, T4>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4): SqlJoin4<T, T1, T2, T3, T4>
 	join<T1, T2, T3, T4, T5>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4, ctor5?: new () => T5): SqlJoin5<T, T1, T2, T3, T4, T5>
 	join<T1, T2, T3, T4, T5, T6>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4, ctor5?: new () => T5, ctor6?: new () => T6): SqlJoin6<T, T1, T2, T3, T4, T5, T6> {
-		return this.__join("", ctor1, ctor2, ctor3, ctor4, ctor5, ctor6)
+		return this._join("", ctor1, ctor2, ctor3, ctor4, ctor5, ctor6)
 	}
 
 	innerJoin<T1>(ctor2: new () => T1): SqlJoin2<T, T, T1>
@@ -69,7 +83,7 @@ export abstract class DefaultSelectExpr<T, Tsb extends SqlBuilder> implements Se
 	innerJoin<T1, T2, T3, T4>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4): SqlJoin4<T, T1, T2, T3, T4>
 	innerJoin<T1, T2, T3, T4, T5>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4, ctor5?: new () => T5): SqlJoin5<T, T1, T2, T3, T4, T5>
 	innerJoin<T1, T2, T3, T4, T5, T6>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4, ctor5?: new () => T5, ctor6?: new () => T6): SqlJoin6<T, T1, T2, T3, T4, T5, T6> {
-		return this.__join("Inner", ctor1, ctor2, ctor3, ctor4, ctor5, ctor6)
+		return this._join("Inner", ctor1, ctor2, ctor3, ctor4, ctor5, ctor6)
 	}
 
 	leftJoin<T1>(ctor2: new () => T1): SqlJoin2<T, T, T1>
@@ -78,7 +92,7 @@ export abstract class DefaultSelectExpr<T, Tsb extends SqlBuilder> implements Se
 	leftJoin<T1, T2, T3, T4>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4): SqlJoin4<T, T1, T2, T3, T4>
 	leftJoin<T1, T2, T3, T4, T5>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4, ctor5?: new () => T5): SqlJoin5<T, T1, T2, T3, T4, T5>
 	leftJoin<T1, T2, T3, T4, T5, T6>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4, ctor5?: new () => T5, ctor6?: new () => T6): SqlJoin6<T, T1, T2, T3, T4, T5, T6> {
-		return this.__join("Left", ctor1, ctor2, ctor3, ctor4, ctor5, ctor6)
+		return this._join("Left", ctor1, ctor2, ctor3, ctor4, ctor5, ctor6)
 	}
 
 	rightJoin<T1>(ctor2: new () => T1): SqlJoin2<T, T, T1>
@@ -87,7 +101,7 @@ export abstract class DefaultSelectExpr<T, Tsb extends SqlBuilder> implements Se
 	rightJoin<T1, T2, T3, T4>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4): SqlJoin4<T, T1, T2, T3, T4>
 	rightJoin<T1, T2, T3, T4, T5>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4, ctor5?: new () => T5): SqlJoin5<T, T1, T2, T3, T4, T5>
 	rightJoin<T1, T2, T3, T4, T5, T6>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4, ctor5?: new () => T5, ctor6?: new () => T6): SqlJoin6<T, T1, T2, T3, T4, T5, T6> {
-		return this.__join("Right", ctor1, ctor2, ctor3, ctor4, ctor5, ctor6)
+		return this._join("Right", ctor1, ctor2, ctor3, ctor4, ctor5, ctor6)
 	}
 
 
@@ -97,11 +111,11 @@ export abstract class DefaultSelectExpr<T, Tsb extends SqlBuilder> implements Se
 	fullJoin<T1, T2, T3, T4>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4): SqlJoin4<T, T1, T2, T3, T4>
 	fullJoin<T1, T2, T3, T4, T5>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4, ctor5?: new () => T5): SqlJoin5<T, T1, T2, T3, T4, T5>
 	fullJoin<T1, T2, T3, T4, T5, T6>(ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4, ctor5?: new () => T5, ctor6?: new () => T6): SqlJoin6<T, T1, T2, T3, T4, T5, T6> {
-		return this.__join("Full", ctor1, ctor2, ctor3, ctor4, ctor5, ctor6)
+		return this._join("Full", ctor1, ctor2, ctor3, ctor4, ctor5, ctor6)
 	}
 
 
-	private __join<T1, T2, T3, T4, T5, T6>(joinType: JoinType, ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4, ctor5?: new () => T5, ctor6?: new () => T6): SqlJoin6<T, T1, T2, T3, T4, T5, T6> {
+	private _join<T1, T2, T3, T4, T5, T6>(joinType: JoinType, ctor1: new () => T1, ctor2?: new () => T2, ctor3?: new () => T3, ctor4?: new () => T4, ctor5?: new () => T5, ctor6?: new () => T6): SqlJoin6<T, T1, T2, T3, T4, T5, T6> {
 		const fnON = (on: Expression<(tab1: T1, tab2: T2, tab3?: T3, tab4?: T4, tab5?: T5, tab6?: T6) => boolean>): SelectExpr<T> => {
 			assertExpression(on)
 			assertArrowFunctionExpression(on.expression)

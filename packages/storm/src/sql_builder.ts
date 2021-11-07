@@ -22,7 +22,9 @@ export abstract class SqlBuilder {
 
 
     /** 参数占位符  */
-    abstract argPlaceholder(): string
+    argPlaceholder(): string {
+        return '?'
+    }
 
     /** 判断是否需要参数化的方式输出sql */
     hasParams() {
@@ -42,6 +44,25 @@ export abstract class SqlBuilder {
 
         });
         return whereStr.trim()
+    }
+
+    orderBy() {
+
+        if (this.context.orderby.length === 0) return ""
+        let sortStr = "order by "
+        this.context.orderby.forEach((item, i) => {
+            if (i > 0)
+                sortStr += ","
+            sortStr += this.orderbyItem(item.expr, item.type)
+        });
+        return sortStr
+    }
+
+
+    orderbyItem(expr: Expression<any>, item: "asc" | "desc"): string {
+        assertExpression(expr)
+        assertArrowFunctionExpression(expr.expression)
+        return `${this.convertVal(expr, expr.expression.body)} ${item}`
     }
 
     /** select语句的limit部分 */
@@ -378,6 +399,7 @@ export abstract class SqlBuilder {
         const sql = [`select ${this.select()} from ${this.tableName(this.context.joins[0])}`,
         this.join(),
         this.where(),
+        this.orderBy(),
         this.limit(),]
             .filter(s => s.length > 0)
             .join(SqlBuilder.NewLine).trim()
@@ -475,8 +497,8 @@ export abstract class SqlBuilder {
                 if (conlums.length > 0) conlums += ","
                 const value = item[field]
                 if (this.hasParams()) {
-                    conlums += this.argPlaceholder()
                     this.params.push(value ?? null)
+                    conlums += this.argPlaceholder()
                 } else {
                     if (value === undefined)
                         conlums += "null"

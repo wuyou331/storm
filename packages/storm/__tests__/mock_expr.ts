@@ -10,9 +10,6 @@ export class MockSqlBuilder extends SqlBuilder {
         super(sqlChar, context, params);
     }
 
-    argPlaceholder() {
-        return '?'
-    }
 }
 
 

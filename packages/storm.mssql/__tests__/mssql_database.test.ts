@@ -4,7 +4,7 @@ import { Blog } from './model';
 import { MssqlDatabase } from './../src/mssql_database';
 
 
-const db: Database = new MssqlDatabase("Server=117.34.101.191,14333;Database=kaoshi;User Id=appUser;Password=Xian821001;Encrypt=false")
+const db: Database = new MssqlDatabase("")
 
 test("insert", async () => {
     const blog = new Blog()
@@ -26,7 +26,7 @@ test('queryList', async () => {
 
 
 test('querySingle', async () => {
-    const sql = db.from(Blog).where(it => it.id > 1).select()
+    const sql = db.from(Blog).where(it => it.id > 1).orderBy(it=>it.id).select()
     await expect(sql.querySingle()).resolves.not.toBeNull()
 });
 
