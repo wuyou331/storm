@@ -171,6 +171,19 @@ test(`order`, () => {
     expect(from(Blog).orderBy(b => b.Id).orderByDescending(b => b.UserId).toMergeSql())
         .toEqual(["select * from Blog"
             , "order by Id asc,UserId desc"].join(SqlBuilder.NewLine));
+
+
+    expect(from(Blog).select(b => ({ b, author: "joe" })).orderBy(b => b.author).toMergeSql())
+        .toEqual(["select Id,UserId,Title,'joe' as author from Blog",
+            "order by author asc"]
+            .join(SqlBuilder.NewLine));
+
+    expect(from(Blog).join(User).on((b, u) => b.UserId === u.Id)
+        .select((b: Blog, u: User) => ({ bId: b.Id, userId: u.Id, author: "joe" }))
+        .orderBy(b => b.author).toMergeSql())
+        .toEqual(["select Id,UserId,Title,'joe' as author from Blog",
+            "order by author asc"]
+            .join(SqlBuilder.NewLine));
 })
 
 test('skip & take', () => {

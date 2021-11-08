@@ -229,13 +229,13 @@ export abstract class DefaultSelectExpr<T, Tsb extends SqlBuilder> implements Se
 
 
 	toMergeSql(): string {
-		const sqlb = new this.sqlBuilder(_SQLCHAR, this.context)
-		return sqlb.selectSql() as string
+		const sql = new this.sqlBuilder(_SQLCHAR, this.context)
+		return sql.selectSql() as string
 	}
 
 	toSql(parms?: any[]): ParamSql {
-		const sqlb = new this.sqlBuilder(_SQLCHAR, this.context, parms === undefined ? [] : parms)
-		return sqlb.selectSql() as ParamSql
+		const sql = new this.sqlBuilder(_SQLCHAR, this.context, parms === undefined ? [] : parms)
+		return sql.selectSql() as ParamSql
 	}
 
 	queryList(): Promise<T[]>
