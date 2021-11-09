@@ -47,7 +47,6 @@ export abstract class SqlBuilder {
     }
 
     orderBy() {
-
         if (this.context.orderby.length === 0) return ""
         let sortStr = "order by "
         this.context.orderby.forEach((item, i) => {
@@ -62,6 +61,7 @@ export abstract class SqlBuilder {
     orderbyItem(expr: Expression<any>, item: "asc" | "desc"): string {
         assertExpression(expr)
         assertArrowFunctionExpression(expr.expression)
+        // 需判断orderby中的字段，是否在select中出现过
         return `${this.convertVal(expr, expr.expression.body)} ${item}`
     }
 
