@@ -49,11 +49,43 @@ export abstract class SqlBuilder {
     orderBy() {
         if (this.context.orderby.length === 0) return ""
         let sortStr = "order by "
-        this.context.orderby.forEach((item, i) => {
-            if (i > 0)
-                sortStr += ","
-            sortStr += this.orderbyItem(item.expr, item.type)
-        });
+        if (this.context.select === undefined || typeof (this.context.select) === "string") {
+            // select是字符串或未定义的情况下
+            this.context.orderby.forEach((item, i) => {
+                if (i > 0)
+                    sortStr += ","
+                const expr = item.expr
+                assertExpression(expr)
+                assertArrowFunctionExpression(expr.expression)
+                sortStr += `${this.convertVal(expr, expr.expression.body)} ${item.type}`
+            });
+        } else {
+            const select = this.context.select
+            assertExpression(select)
+            assertArrowFunctionExpression(select.expression)
+
+            const expr = this.unParenthesizedExpression(select.expression.body)
+            this.context.orderby.forEach((item, i) => {
+                if (i > 0)
+                    sortStr += ","
+                if (isObjectLiteralExpression(expr)) {
+                    for (const prop of expr.properties) {
+                        if (isPropertyAssignmentExpression(prop)) {
+                            assertIdentifier(prop.name)
+                            if (isPropertyAccessExpression(prop.initializer) || isStringLiteral(prop.initializer)) {
+                                sortStr += `${prop.name.escapedText} ${item.type}`
+                            }
+                            else {
+                                throw Error("orderBy方法中有不能识别的列" + prop.name.escapedText)
+                            }
+
+
+                        }
+                    }
+                }
+            });
+        }
+
         return sortStr
     }
 
@@ -64,6 +96,123 @@ export abstract class SqlBuilder {
         // 需判断orderby中的字段，是否在select中出现过
         return `${this.convertVal(expr, expr.expression.body)} ${item}`
     }
+
+    /**
+     * 表达式解括号 ((b.Id)) 返回 b.Id
+     * @param expr 
+     * @returns 
+     */
+    unParenthesizedExpression(expr: ExpressionNode) {
+        while (isParenthesizedExpression(expr)) {
+            // 多重圆括号包裹
+            expr = expr.expression
+        }
+        return expr
+    }
+
+    /** 转换sql语句 select 部分
+     * @this.params 参数非null表示用参数化的方式输出sql语句且this.params为参数数组
+     */
+    select() {
+        const select = this.context.select
+        if (select === undefined) {
+            return "*"
+        } else if (typeof select === "string") {
+            return select.trim()
+        } else {
+            assertExpression(select)
+            assertArrowFunctionExpression(select.expression)
+            const expr = this.unParenthesizedExpression(select.expression.body)
+
+            if (isObjectLiteralExpression(expr)) {
+                // eg: Select(i=>{Id:id.Id})
+                const selectStr = []
+                for (const prop of expr.properties) {
+                    if (isShorthandPropertyAssignmentExpression(prop)) {
+                        // eg: Select(i=>{i})
+                        assertIdentifier(prop.name)
+                        selectStr.push(this.selectFieldByIdentifier(prop.name))
+                    } else if (isPropertyAssignmentExpression(prop)) {
+                        assertIdentifier(prop.name)
+                        if (isPropertyAccessExpression(prop.initializer)) {
+                            const left = this.convertVal(select, prop.initializer)
+                            const right = prop.name.escapedText
+                            if (left === right)
+                                selectStr.push(right)
+                            else
+                                selectStr.push(`${left} as ${right}`)
+                        }
+                        else if (isStringLiteral(prop.initializer) || isNumericLiteral(prop.initializer)
+                            || prop.initializer.kind == ExpressionKind.TrueKeyword
+                            || prop.initializer.kind == ExpressionKind.FalseKeyword) {
+                            const left = this.convertVal(select, prop.initializer)
+                            const right = prop.name.escapedText
+                            selectStr.push(`${left} as ${right}`)
+                        } else if (isIdentifier(prop.initializer)) {
+                            // eg: Select(i=>{height:h })
+                            const left = this.convertVal(select, prop.initializer)
+                            const right = prop.name.escapedText
+                            selectStr.push(`${left} as ${right}`)
+                        }
+                        else {
+                            throw Error("Select方法中有不能识别的列" + prop.name.escapedText)
+                        }
+
+
+                    }
+                }
+                return selectStr.join(',').trim()
+
+            } else if (isIdentifier(expr)) {
+                // eg: Select(i=>i)
+                return this.selectFieldByIdentifier(expr).trim()
+            } else if (isPropertyAccessExpression(expr)) {
+                // eg: Select(i=>i)
+                return this.convertVal(select, expr)
+            } else {
+                throw Error("Select方法中有不能识别的语法")
+            }
+        }
+
+    }
+
+
+    /** select中列出某个对象所有字段 eg: Select(i=>{i}) */
+    selectFieldByIdentifier(expr: IdentifierExpressionNode) {
+        const select = this.context.select
+        const classAlias = expr.escapedText
+        if (select.expression.parameters.some(p => p.name.escapedText === classAlias)) {
+            // 访问对象属性，需列举出所有属性
+            const index = this.context.joins.findIndex(j => j.Alias === classAlias)
+            let ctor: new () => any
+            if (index === -1) {
+                if (this.context.joins.length === 1) {
+                    ctor = this.context.joins[0].Ctor
+                } else {
+                    throw Error(`Select方法有不能识别的别名'${classAlias}'`)
+                }
+            } else {
+                ctor = this.context.joins[index].Ctor
+            }
+
+            const members = Meta.getMembers(ctor)
+
+            if (this.context.joins.length === 1)
+                return members
+                    .filter(member => !this.isSelectIgnore(ctor, classAlias, member))
+                    .map(member => `${this.getFieldAliasBtCtor(ctor, member)}`)
+                    .join(',')
+            else
+                return members
+                    .filter(member => !this.isSelectIgnore(ctor, classAlias, member))
+                    .map(member => `${classAlias}.${this.getFieldAliasBtCtor(ctor, member)}`)
+                    .join(",")
+        } else {
+            // 直接引用变量
+            return `${this.convertVal(select, expr) as string} as ${classAlias}`
+        }
+    }
+
 
     /** select语句的limit部分 */
     limit() {
@@ -292,104 +441,6 @@ export abstract class SqlBuilder {
         return name
     }
 
-    /** 转换sql语句 select 部分
-     * @this.params 参数非null表示用参数化的方式输出sql语句且this.params为参数数组
-     */
-    select() {
-        const select = this.context.select
-        if (select === undefined) {
-            return "*"
-        } else if (typeof select === "string") {
-            return select.trim()
-        } else {
-            assertExpression(select)
-            assertArrowFunctionExpression(select.expression)
-            let expr: ExpressionNode = select.expression.body
-            while (isParenthesizedExpression(expr)) {
-                // 多重圆括号包裹
-                expr = expr.expression
-            }
-
-            if (isObjectLiteralExpression(expr)) {
-                // eg: Select(i=>{Id:id.Id})
-                const selectStr = []
-                for (const prop of expr.properties) {
-                    if (isShorthandPropertyAssignmentExpression(prop)) {
-                        // eg: Select(i=>{i})
-                        assertIdentifier(prop.name)
-                        selectStr.push(this.selectFieldByIdentifier(prop.name))
-                    } else if (isPropertyAssignmentExpression(prop)) {
-                        assertIdentifier(prop.name)
-                        if (isPropertyAccessExpression(prop.initializer)) {
-                            const left = this.convertVal(select, prop.initializer)
-                            const right = prop.name.escapedText
-                            if (left === right)
-                                selectStr.push(right)
-                            else
-                                selectStr.push(`${left} as ${prop.name.escapedText}`)
-                        }
-                        else if (isStringLiteral(prop.initializer)) {
-                            const left = this.convertVal(select, prop.initializer)
-                            const right = prop.name.escapedText
-                            if (left === right)
-                                selectStr.push(right)
-                            else
-                                selectStr.push(`${left} as ${prop.name.escapedText}`)
-                        }
-                        else {
-                            throw Error("Select方法中有不能识别的列" + prop.name.escapedText)
-                        }
-
-
-                    }
-                }
-                return selectStr.join(',').trim()
-
-            } else if (isIdentifier(expr)) {
-                // eg: Select(i=>i)
-                return this.selectFieldByIdentifier(expr).trim()
-            } else if (isPropertyAccessExpression(expr)) {
-                // eg: Select(i=>i)
-                return this.convertVal(select, expr)
-            } else {
-                throw Error("Select方法中有不能识别的语法")
-            }
-        }
-
-    }
-
-
-    /** select中列出某个对象所有字段 eg: Select(i=>{i}) */
-    selectFieldByIdentifier(expr: IdentifierExpressionNode) {
-        const select = this.context.select
-        const classAlias = expr.escapedText
-        if (select.expression.parameters.some(p => p.name.escapedText === classAlias)) {
-            const index = this.context.joins.findIndex(j => j.Alias === classAlias)
-            let ctor: new () => any
-            if (index === -1) {
-                if (this.context.joins.length === 1) {
-                    ctor = this.context.joins[0].Ctor
-                } else {
-                    throw Error(`Select方法有不能识别的别名'${classAlias}'`)
-                }
-            } else {
-                ctor = this.context.joins[index].Ctor
-            }
-
-            const members = Meta.getMembers(ctor)
-
-            if (this.context.joins.length === 1)
-                return members
-                    .filter(member => !this.isSelectIgnore(ctor, classAlias, member))
-                    .map(member => `${this.getFieldAliasBtCtor(ctor, member)}`)
-                    .join(',')
-            else
-                return members
-                    .filter(member => !this.isSelectIgnore(ctor, classAlias, member))
-                    .map(member => `${classAlias}.${this.getFieldAliasBtCtor(ctor, member)}`)
-                    .join(",")
-        }
-    }
 
 
     //#region  select语句
