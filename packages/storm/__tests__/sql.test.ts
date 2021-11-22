@@ -178,17 +178,20 @@ test(`order`, () => {
             , "order by Id asc,UserId desc"].join(SqlBuilder.NewLine));
 
 
-    expect(from(Blog).select(b => ({ b, author: "joe" })).orderBy(b => b.b).toMergeSql())
+    expect(from(Blog).select(b => ({ b, author: "joe" })).orderBy(b => b.author).toMergeSql())
         .toEqual(["select Id,UserId,Title,'joe' as author from Blog",
             "order by author asc"]
             .join(SqlBuilder.NewLine));
 
-    // expect(from(Blog).join(User).on((b, u) => b.UserId === u.Id)
-    //     .select((b: Blog, u: User) => ({ bId: b.Id, userId: u.Id, author: "joe" }))
-    //     .orderBy(b => b.bId).toMergeSql())
-    //     .toEqual(["select Id,UserId,Title,'joe' as author from Blog",
-    //         "order by bId asc"]
-    //         .join(SqlBuilder.NewLine));
+
+
+    expect(from(Blog).join(User).on((b, u) => b.UserId === u.Id)
+        .select((b: Blog, u: User) => ({ bId: b.Id, userId: u.Id, author: "joe" }))
+        .orderBy(b => b.bId).toMergeSql())
+        .toEqual(["select b.Id as bId,u.user_id as userId,'joe' as author from Blog as b",
+            "join users as u on b.UserId = u.user_id",
+            "order by bId asc"]
+            .join(SqlBuilder.NewLine));
 })
 
 

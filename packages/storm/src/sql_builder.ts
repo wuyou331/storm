@@ -68,17 +68,23 @@ export abstract class SqlBuilder {
             this.context.orderby.forEach((item, i) => {
                 if (i > 0)
                     sortStr += ","
+
+                assertExpression(item.expr)
+                assertArrowFunctionExpression(item.expr.expression)
+                assertPropertyAccessExpression(item.expr.expression.body)
+                const orderByExpr = item.expr.expression.body
                 if (isObjectLiteralExpression(expr)) {
                     for (const prop of expr.properties) {
                         if (isPropertyAssignmentExpression(prop)) {
                             assertIdentifier(prop.name)
-                            if (isPropertyAccessExpression(prop.initializer) || isStringLiteral(prop.initializer)) {
-                                sortStr += `${prop.name.escapedText} ${item.type}`
+                            if (prop.name.escapedText === orderByExpr.name.escapedText) {
+                                if (isPropertyAccessExpression(prop.initializer) || isStringLiteral(prop.initializer)) {
+                                    sortStr += `${prop.name.escapedText} ${item.type}`
+                                }
+                                else {
+                                    throw Error("orderBy方法中有不能识别的列" + prop.name.escapedText)
+                                }
                             }
-                            else {
-                                throw Error("orderBy方法中有不能识别的列" + prop.name.escapedText)
-                            }
-
 
                         }
                     }
