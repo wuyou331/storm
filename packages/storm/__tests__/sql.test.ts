@@ -184,6 +184,15 @@ test(`order`, () => {
             .join(SqlBuilder.NewLine));
 
 
+    expect(from(Blog).join(User).on((b, u) => b.UserId === u.Id)
+        .orderByDescending<User>(u => u.Id)
+        .orderBy<Blog>(b => b.Id)
+        .toMergeSql())
+        .toEqual(["select * from Blog as b",
+            "join users as u on b.UserId = u.user_id",
+            "order by u.user_id desc,b.Id asc"]
+            .join(SqlBuilder.NewLine));
+
 
     expect(from(Blog).join(User).on((b, u) => b.UserId === u.Id)
         .select((b: Blog, u: User) => ({ bId: b.Id, userId: u.Id, author: "joe" }))
